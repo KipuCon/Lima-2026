@@ -50,10 +50,8 @@ app.get('/api/v1/ciudadano/:dni', (req, res) => {
     });
   }
 
-  // Return only what the real ONPE endpoint returned:
-  // nombre, sexo, edad/fecha_nacimiento, DNI
-  // The real endpoint at hackathon.pe/hackathon_ve/person/{DNI}
-  // returned: name, sex, age verification, DNI number
+  // Return only what the real ONPE hackathon endpoint returned:
+  // nombre, sexo, fecha_nacimiento, DNI — no auth required (2018)
   res.json({
     dni: citizen.dni,
     nombres: citizen.nombre,

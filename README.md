@@ -1,23 +1,48 @@
+<table width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td align="center" bgcolor="#0d0d0d" style="padding:32px 0 24px">
+<img src="https://kipucon.org/KipuCon.svg" alt="KipuCon" width="220"/>
+<br/><br/>
+<strong style="color:#ffffff;font-size:18px">The Latin American Cybersecurity Summit</strong><br/>
+<em style="color:#aaaaaa">Decrypting the Future. Honoring the Past.</em>
+</td></tr></table>
+
 <div align="center">
 
-<img src="https://kipucon.org/KipuCon.svg" alt="KipuCon" width="200"/>
-
-# Lima 2026
-
-**The Latin American Cybersecurity Summit**
-
-*Decrypting the Future. Honoring the Past.*
-
----
+![Lima](https://img.shields.io/badge/📍_Lima,_Peru-2026-ff3131?style=flat-square&labelColor=1a1a1a)
+![Edition](https://img.shields.io/badge/KipuCon-Lima_2026-ffffff?style=flat-square&labelColor=1a1a1a)
+![Sec--Llama](https://img.shields.io/badge/Presented_by-Sec--Llama-ff3131?style=flat-square&labelColor=1a1a1a)
 
 </div>
 
+---
+
 ## Talks
 
-| # | Talk | Speaker | Materials |
-|---|------|---------|-----------|
-| 1 | [Lo que un hacker ve y tu empresa no](./lo-que-un-hacker-ve/) | Omri Nuri — Sec-Llama | Slides + Live Demo |
-| 2 | [When Elevators Get Hacked](./when-elevators-get-hacked/) | Michael Dahan — Sec-Llama | Slides + Demo |
+<table width="100%">
+<tr>
+<td width="50%" valign="top">
+
+### 🌐 Lo que un hacker ve y tu empresa no
+
+**Omri Nuri** — Web Red Team Lead, Sec-Llama
+
+Four real vulnerabilities that exposed millions of Latin American records — demonstrated live. IDOR, broken auth, Base64 theater, and automated exploitation. Built for C-level decision makers.
+
+→ [Slides + Demo](./lo-que-un-hacker-ve/)
+
+</td>
+<td width="50%" valign="top">
+
+### 🏗️ When Elevators Get Hacked
+
+**Michael Dahan** — Sec-Llama
+
+A live simulation of a targeted OT/ICS attack against a building's elevator control system. PLCs, a SCADA dispatcher, Modbus TCP, and a real-time dashboard — all on your laptop.
+
+→ [Slides + Demo](./when-elevators-get-hacked/)
+
+</td>
+</tr>
+</table>
 
 ---
 
