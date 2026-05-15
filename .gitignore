@@ -1,0 +1,6 @@
+node_modules/
+backup-videos/
+*.mp4
+test-results/
+report/
+.DS_Store

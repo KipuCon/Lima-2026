@@ -1,0 +1,12 @@
+{
+  "name": "kipucon-e2e",
+  "private": true,
+  "scripts": {
+    "test": "npx playwright test",
+    "test:headed": "npx playwright test --headed",
+    "record": "npx playwright test --headed --workers=1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.50.0"
+  }
+}

