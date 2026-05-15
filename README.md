@@ -17,7 +17,7 @@
 | # | Talk | Speaker | Materials |
 |---|------|---------|-----------|
 | 1 | [Lo que un hacker ve y tu empresa no](./lo-que-un-hacker-ve/) | Omri Nuri — Sec-Llama | Slides + Live Demo |
-| 2 | [When Elevators Get Hacked](./when-elevators-get-hacked/) | Michael | Slides + Demo |
+| 2 | [When Elevators Get Hacked](./when-elevators-get-hacked/) | Michael Dahan — Sec-Llama | Slides + Demo |
 
 ---
 
