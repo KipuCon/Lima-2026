@@ -1,0 +1,21 @@
+# Large source files — keep out of Git (exceeds GitHub 100 MB limit / bloats clones)
+Presentation/*.pptx
+Video/
+*.mp4
+
+# Office lock files
+~$*
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

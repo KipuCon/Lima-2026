@@ -1,0 +1,1543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OT Cyber Demo — Live Dashboard | Sec-Llama / KipuCon</title>
+<style>
+  :root {
+    --bg:       #0D1B2A;
+    --bg2:      #132033;
+    --bg3:      #1E3048;
+    --border:   #2D4A6A;
+    --text:     #D5E0EE;
+    --muted:    #7F8FA6;
+    --red:      #C0392B;
+    --redl:     #E74C3C;
+    --amber:    #E67E22;
+    --teal:     #1ABC9C;
+    --blue:     #3498DB;
+    --green:    #27AE60;
+    --purple:   #9B59B6;
+    --code-bg:  #1A2E42;
+    --font-mono: 'Consolas', 'Monaco', monospace;
+    --font-sans: -apple-system, 'Segoe UI', sans-serif;
+    --radius: 8px;
+    --phase-color: var(--teal);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.5;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  /* ── Header ──────────────────────────────────────────── */
+  .header {
+    background: var(--bg2);
+    border-bottom: 2px solid var(--phase-color);
+    padding: 10px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 52px;
+    transition: border-color 1s;
+  }
+  .header-left { display: flex; align-items: center; gap: 16px; }
+  .header h1 { font-size: 16px; font-weight: 700; color: #fff; letter-spacing: .03em; }
+  .header .badges { display: flex; gap: 8px; }
+  .badge {
+    font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 3px;
+    letter-spacing: .06em; text-transform: uppercase;
+  }
+  .badge-red { background: var(--red); color: #fff; }
+  .badge-teal { background: #0D4035; color: var(--teal); border: 1px solid var(--teal); }
+  .header-right { display: flex; align-items: center; gap: 16px; font-size: 13px; color: var(--muted); }
+  .elapsed { font-family: var(--font-mono); font-size: 15px; color: var(--teal); font-weight: 700; }
+  .conn-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .conn-dot.on { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .conn-dot.off { background: var(--red); }
+  #muteBtn {
+    background: var(--bg3); border: 1px solid var(--border); color: var(--muted);
+    padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 12px;
+  }
+  #muteBtn:hover { color: #fff; border-color: var(--teal); }
+
+  /* ── Main 3-column layout ────────────────────────────── */
+  .main {
+    display: flex;
+    height: calc(100vh - 52px - 36px);
+    overflow-x: auto;
+  }
+
+  /* Left stats panel */
+  .stats-panel {
+    flex: 0 0 clamp(130px, 14vw, 180px);
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow-y: auto;
+  }
+  .stat-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px;
+    transition: border-color 0.5s, box-shadow 0.5s;
+  }
+  .stat-card.fault {
+    border-color: var(--red);
+    box-shadow: 0 0 12px rgba(231,76,60,0.3);
+  }
+  .stat-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+  }
+  .stat-card-name {
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: .04em;
+  }
+  .stat-card-name.elv1 { color: var(--green); }
+  .stat-card-name.elv2 { color: var(--blue); }
+  .stat-card-name.elv3 { color: var(--purple); }
+  .target-badge {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 1px 5px;
+    border-radius: 2px;
+    background: rgba(231,76,60,0.2);
+    color: var(--redl);
+    border: 1px solid rgba(231,76,60,0.4);
+    letter-spacing: .06em;
+  }
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    font-family: var(--font-mono);
+    color: var(--muted);
+    padding: 1px 0;
+  }
+  .stat-val {
+    color: var(--text);
+    font-weight: 600;
+  }
+  .stat-state {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 3px;
+    display: inline-block;
+    margin-top: 4px;
+  }
+  .state-idle { background: #0D4035; color: var(--teal); }
+  .state-moving { background: #0A2740; color: var(--blue); }
+  .state-doors { background: #3D2800; color: var(--amber); }
+  .state-fault { background: #3A1010; color: var(--redl); animation: faultBlink 1s infinite; }
+  @keyframes faultBlink { 50% { opacity: 0.6; } }
+
+  .stat-fault-code {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    margin-top: 3px;
+  }
+  .stat-fault-code.ok { color: var(--green); }
+  .stat-fault-code.err { color: var(--redl); }
+
+  /* Queue bar (in stat card) */
+  .stat-queue-bar {
+    height: 14px;
+    margin-top: 5px;
+    background: var(--bg3);
+    border-radius: 3px;
+    overflow: hidden;
+    position: relative;
+    border: 1px solid var(--border);
+  }
+  .stat-queue-fill {
+    height: 100%;
+    transition: width 0.3s, background 0.3s;
+    border-radius: 2px;
+  }
+  .stat-queue-label {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text);
+    font-family: var(--font-mono);
+  }
+
+  /* ── Center: Building cross-section ──────────────────── */
+  .center-panel {
+    flex: 1;
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    min-width: 280px;
+  }
+
+  /* LED displays above building */
+  .led-row {
+    display: flex;
+    justify-content: center;
+    gap: 0;
+    margin-bottom: 6px;
+    padding: 0 30px;
+  }
+  .led-display {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 32px;
+    background: #0A0A0A;
+    border: 1px solid #333;
+    border-radius: 4px;
+    margin: 0 2px;
+  }
+  .led-floor {
+    font-family: var(--font-mono);
+    font-size: 22px;
+    font-weight: 900;
+    color: #FF8C00;
+    text-shadow: 0 0 8px rgba(255,140,0,0.6);
+    letter-spacing: 2px;
+    transition: color 0.3s, text-shadow 0.3s;
+    min-width: 32px;
+    text-align: center;
+  }
+  .led-floor.fault {
+    color: #FF2222;
+    text-shadow: 0 0 12px rgba(255,34,34,0.8);
+    animation: ledFlicker 0.15s infinite;
+  }
+  @keyframes ledFlicker {
+    0% { opacity: 1; }
+    50% { opacity: 0.3; }
+    100% { opacity: 1; }
+  }
+  .led-arrow {
+    font-size: 12px;
+    color: #FF8C00;
+    min-width: 12px;
+    text-align: center;
+  }
+  .led-arrow.fault { color: #FF2222; }
+  .led-label {
+    font-size: 11px;
+    color: #666;
+    font-weight: 700;
+    letter-spacing: .06em;
+  }
+
+  /* Building structure */
+  .building {
+    flex: 1;
+    background: var(--bg2);
+    border: 2px solid var(--border);
+    border-radius: 6px;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: box-shadow 1s;
+  }
+  .building.emergency {
+    box-shadow: inset 0 0 60px rgba(231,76,60,0.15);
+    animation: emergencyPulse 2s ease-in-out infinite;
+  }
+  @keyframes emergencyPulse {
+    0%, 100% { box-shadow: inset 0 0 40px rgba(231,76,60,0.1); }
+    50% { box-shadow: inset 0 0 80px rgba(231,76,60,0.25); }
+  }
+
+  /* Machine room header */
+  .machine-room {
+    height: 24px;
+    background: linear-gradient(to bottom, #1A252F, #152030);
+    border-bottom: 2px solid #3A3A3A;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .1em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  /* Floor rows container */
+  .building-floors {
+    flex: 1;
+    position: relative;
+  }
+
+  /* Floor row dividers */
+  .floor-row {
+    position: absolute;
+    left: 0;
+    right: 0;
+    border-bottom: 1px solid rgba(45,74,106,0.4);
+    display: flex;
+    align-items: center;
+  }
+  .floor-number {
+    width: 26px;
+    font-size: 11px;
+    font-family: var(--font-mono);
+    color: var(--muted);
+    text-align: center;
+    font-weight: 600;
+  }
+
+  /* Shaft columns (guide rail borders) */
+  .shaft-area {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    border-left: 2px solid rgba(45,74,106,0.4);
+    border-right: 2px solid rgba(45,74,106,0.4);
+  }
+  .shaft-area-1 { left: 26px; width: calc((100% - 26px) / 3); border-color: rgba(39,174,96,0.25); }
+  .shaft-area-2 { left: calc(26px + (100% - 26px) / 3); width: calc((100% - 26px) / 3); border-color: rgba(52,152,219,0.25); }
+  .shaft-area-3 { left: calc(26px + 2 * (100% - 26px) / 3); width: calc((100% - 26px) / 3); border-color: rgba(155,89,182,0.25); }
+
+  /* Lobby indicators */
+  .lobby-dot {
+    position: absolute;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: rgba(45,74,106,0.3);
+    transition: background 0.3s, box-shadow 0.3s;
+    left: 5px;
+  }
+  .lobby-dot.present {
+    background: var(--teal);
+    box-shadow: 0 0 6px var(--teal);
+  }
+  .lobby-dot.fault-present {
+    background: var(--redl);
+    box-shadow: 0 0 6px var(--redl);
+    animation: faultBlink 0.5s infinite;
+  }
+
+  /* ── Elevator car ──────────────────────────────────────── */
+  .car {
+    position: absolute;
+    border-radius: 3px;
+    transition: top 1s ease, background 0.3s, box-shadow 0.3s;
+    z-index: 5;
+  }
+  .car-body {
+    width: 100%;
+    height: 100%;
+    border-radius: 3px;
+    background: linear-gradient(to bottom, #2C3E50, #1A252F);
+    border: 1px solid #4A6A8A;
+    position: relative;
+    overflow: hidden;
+    transition: background 0.5s, border-color 0.5s;
+  }
+  .car.fault .car-body {
+    background: linear-gradient(to bottom, #5A1A1A, #3A0A0A);
+    border-color: var(--redl);
+    box-shadow: 0 0 20px rgba(231,76,60,0.5);
+    animation: carFaultPulse 1.5s ease-in-out infinite;
+  }
+  @keyframes carFaultPulse {
+    0%, 100% { box-shadow: 0 0 15px rgba(231,76,60,0.3); }
+    50% { box-shadow: 0 0 30px rgba(231,76,60,0.6); }
+  }
+
+  /* Roof light bar */
+  .car-roof-light {
+    position: absolute;
+    top: 0;
+    left: 10%;
+    right: 10%;
+    height: 3px;
+    background: var(--teal);
+    border-radius: 0 0 2px 2px;
+    transition: background 0.3s;
+  }
+  .car.fault .car-roof-light {
+    background: var(--redl);
+    animation: roofFlash 0.3s infinite;
+  }
+  @keyframes roofFlash {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.2; }
+  }
+
+  /* Sliding doors */
+  .car-door-left, .car-door-right {
+    position: absolute;
+    top: 4px;
+    bottom: 2px;
+    width: 45%;
+    background: rgba(0,0,0,0.5);
+    border: 1px solid rgba(100,130,160,0.3);
+    transition: transform 0.4s ease;
+  }
+  .car-door-left {
+    left: 2px;
+    border-radius: 2px 0 0 2px;
+    transform: translateX(0);
+  }
+  .car-door-right {
+    right: 2px;
+    border-radius: 0 2px 2px 0;
+    transform: translateX(0);
+  }
+  .car.doors-open .car-door-left { transform: translateX(-90%); }
+  .car.doors-open .car-door-right { transform: translateX(90%); }
+
+  /* Car elevator number label */
+  .car-label {
+    position: absolute;
+    bottom: 1px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 900;
+    opacity: 0.7;
+    z-index: 2;
+    pointer-events: none;
+    text-shadow: 0 0 4px rgba(0,0,0,0.8);
+  }
+  .car.fault .car-label { color: var(--redl) !important; opacity: 1; }
+
+  .car-cable-1 { border-color: rgba(39,174,96,0.3) !important; }
+  .car-cable-2 { border-color: rgba(52,152,219,0.3) !important; }
+  .car-cable-3 { border-color: rgba(155,89,182,0.3) !important; }
+
+  /* Cable line */
+  .car-cable {
+    position: absolute;
+    top: 0;
+    width: 1px;
+    border-left: 1px dashed rgba(100,130,160,0.3);
+    z-index: 4;
+    pointer-events: none;
+    transition: border-color 0.3s;
+  }
+  .car-cable.fault { border-color: rgba(231,76,60,0.4); }
+
+  /* Emergency overlay on shaft */
+  .shaft-emergency {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(192,57,43,0.12);
+    z-index: 8;
+    pointer-events: none;
+  }
+  .shaft-emergency.active { display: flex; }
+  .emergency-text {
+    font-size: 13px;
+    font-weight: 900;
+    color: rgba(231,76,60,0.8);
+    letter-spacing: .15em;
+    text-transform: uppercase;
+    animation: trappedBlink 1s ease-in-out infinite;
+  }
+  .emergency-timer {
+    font-size: 16px;
+    font-weight: 900;
+    color: #fff;
+    font-family: var(--font-mono);
+    margin-top: 2px;
+    text-shadow: 0 0 8px rgba(231,76,60,0.6);
+  }
+  @keyframes trappedBlink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  /* Spark particles */
+  .spark {
+    position: absolute;
+    width: 2px;
+    height: 2px;
+    background: #FFD700;
+    border-radius: 50%;
+    z-index: 9;
+    pointer-events: none;
+    animation: sparkFall 1.2s linear forwards;
+  }
+  @keyframes sparkFall {
+    0% { opacity: 1; transform: translate(0, 0); }
+    100% { opacity: 0; transform: translate(var(--sx), var(--sy)); }
+  }
+
+  /* Scan-line effect (RECON phase) */
+  .scan-line {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(to right, transparent, rgba(26,188,156,0.6), transparent);
+    z-index: 6;
+    pointer-events: none;
+    animation: scanSweep 3s linear infinite;
+    display: none;
+  }
+  .building.recon .scan-line { display: block; }
+  @keyframes scanSweep {
+    0% { top: 0; }
+    100% { top: 100%; }
+  }
+
+  /* Building pit */
+  .building-pit {
+    height: 8px;
+    background: #0A0E14;
+    border-top: 2px solid #3A3A3A;
+  }
+
+  /* ── Right panel ─────────────────────────────────────── */
+  .right-panel {
+    flex: 0 0 clamp(260px, 30vw, 380px);
+    padding: 12px 12px 12px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  /* Network topology */
+  .topology-panel {
+    flex: 0 0 55%;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    position: relative;
+    overflow: hidden;
+  }
+  .topology-panel svg { width: 100%; height: 100%; }
+  .topo-node { font-family: var(--font-mono); font-size: 11px; font-weight: 700; }
+  .topo-label { font-family: var(--font-mono); font-size: 11px; fill: var(--muted); }
+
+  /* Event log */
+  .event-log-panel {
+    flex: 1;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .event-log-header {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .event-log {
+    flex: 1;
+    overflow-y: auto;
+    padding: 4px 10px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 1.5;
+  }
+  .event-log::-webkit-scrollbar { width: 5px; }
+  .event-log::-webkit-scrollbar-track { background: var(--bg2); }
+  .event-log::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  .event-line {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 1px 0;
+    animation: fadeIn 0.3s ease;
+    border-left: 2px solid transparent;
+    padding-left: 6px;
+  }
+  .event-line.attack-event {
+    border-left-color: var(--red);
+    background: rgba(192,57,43,0.08);
+    color: var(--redl);
+    font-weight: 700;
+  }
+  .ev-time { color: var(--muted); }
+  .ev-source-SCADA { color: var(--teal); }
+  .ev-source-ELV-1 { color: var(--green); }
+  .ev-source-ELV-2 { color: var(--blue); }
+  .ev-source-ELV-3 { color: var(--purple); }
+  .ev-source-MODBUS { color: var(--amber); }
+  .ev-source-ATTACK { color: var(--redl); }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-3px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── Bottom bar: attack phase timeline ───────────────── */
+  .bottom-bar {
+    height: 36px;
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    gap: 0;
+    border-top: 1px solid var(--border);
+    background: var(--bg2);
+    flex-shrink: 0;
+  }
+  .timeline-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--muted);
+    margin-right: 12px;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    white-space: nowrap;
+  }
+  .phase-segment {
+    flex: 1;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    border: 1px solid var(--border);
+    transition: all 0.5s;
+    color: var(--muted);
+  }
+  .phase-segment:first-of-type { border-radius: 4px 0 0 4px; }
+  .phase-segment:last-of-type { border-radius: 0 4px 4px 0; }
+  .phase-segment.active { color: #fff; animation: phasePulse 1.5s ease-in-out infinite; }
+  .phase-segment.passed { opacity: 0.8; }
+  .phase-seg-0.active, .phase-seg-0.passed { background: #0D4035; border-color: var(--teal); color: var(--teal); }
+  .phase-seg-1.active, .phase-seg-1.passed { background: #3D2800; border-color: var(--amber); color: var(--amber); }
+  .phase-seg-2.active, .phase-seg-2.passed { background: #3A1010; border-color: #E74C3C; color: #E74C3C; }
+  .phase-seg-3.active, .phase-seg-3.passed { background: #2A0505; border-color: var(--red); color: var(--red); }
+  .phase-seg-4.active, .phase-seg-4.passed { background: #1A0303; border-color: #8B0000; color: #FF4444; }
+  @keyframes phasePulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+
+  /* Downtime ticker in phase bar */
+  .downtime-ticker {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--redl);
+    font-family: var(--font-mono);
+    margin-left: 12px;
+    white-space: nowrap;
+    min-width: 120px;
+  }
+
+  /* ── Screen shake ────────────────────────────────────── */
+  .screen-shake { animation: shake 0.2s ease-in-out; }
+  @keyframes shake {
+    0%, 100% { transform: translate(0, 0); }
+    20% { transform: translate(-3px, 2px); }
+    40% { transform: translate(3px, -2px); }
+    60% { transform: translate(-2px, -1px); }
+    80% { transform: translate(2px, 1px); }
+  }
+
+  /* Glitch text effect */
+  .glitch { animation: glitch 0.3s infinite; }
+  @keyframes glitch {
+    0% { text-shadow: 2px 0 var(--redl), -2px 0 var(--blue); }
+    25% { text-shadow: -2px 0 var(--redl), 2px 0 var(--blue); }
+    50% { text-shadow: 2px -1px var(--redl), -2px 1px var(--blue); }
+    75% { text-shadow: -1px 2px var(--redl), 1px -2px var(--blue); }
+    100% { text-shadow: 2px 0 var(--redl), -2px 0 var(--blue); }
+  }
+
+  /* Flood overlay on shaft */
+  .shaft-flood-overlay {
+    position: absolute;
+    left: 0; right: 0; top: 0; bottom: 0;
+    background: rgba(230,126,34,0.12);
+    z-index: 3;
+    pointer-events: none;
+    display: none;
+    animation: floodPulse 1s ease-in-out infinite;
+  }
+  @keyframes floodPulse {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 1; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── Header ──────────────────────────────────────────── -->
+<div class="header" id="header">
+  <div class="header-left">
+    <h1>OT Cyber Demo</h1>
+    <div class="badges">
+      <span class="badge badge-teal">Sec-Llama</span>
+      <span class="badge badge-red">KipuCon</span>
+    </div>
+  </div>
+  <div class="header-right">
+    <span><span class="conn-dot off" id="connDot"></span> <span id="connLabel">Disconnected</span></span>
+    <span>Elapsed: <span class="elapsed" id="elapsedTime">0:00</span></span>
+    <button id="muteBtn" onclick="toggleMute()">UNMUTE</button>
+  </div>
+</div>
+
+<!-- ── Main content ────────────────────────────────────── -->
+<div class="main" id="mainContent">
+
+  <!-- Left: Elevator stats -->
+  <div class="stats-panel" id="statsPanel">
+    <!-- Cards generated by JS -->
+  </div>
+
+  <!-- Center: Building cross-section -->
+  <div class="center-panel">
+    <div class="led-row" id="ledRow">
+      <!-- LED displays generated by JS -->
+    </div>
+    <div class="building" id="building">
+      <div class="machine-room">Machine Room</div>
+      <div class="building-floors" id="buildingFloors">
+        <div class="scan-line"></div>
+        <!-- Floor rows, shaft areas, cars, cables generated by JS -->
+      </div>
+      <div class="building-pit"></div>
+    </div>
+  </div>
+
+  <!-- Right: Topology + Event Log -->
+  <div class="right-panel">
+    <div class="topology-panel" id="topoPanel">
+      <svg viewBox="0 0 400 340" id="topoSvg">
+        <!-- Connection lines -->
+        <line id="line-scada-1" x1="200" y1="70" x2="100" y2="180" stroke="#2D4A6A" stroke-width="2"/>
+        <line id="line-scada-2" x1="200" y1="70" x2="200" y2="180" stroke="#2D4A6A" stroke-width="2"/>
+        <line id="line-scada-3" x1="200" y1="70" x2="300" y2="180" stroke="#2D4A6A" stroke-width="2"/>
+        <line id="line-atk-1" x1="100" y1="290" x2="100" y2="210" stroke="transparent" stroke-width="2" stroke-dasharray="6,4"/>
+        <line id="line-atk-2" x1="100" y1="290" x2="200" y2="210" stroke="transparent" stroke-width="2" stroke-dasharray="6,4"/>
+        <line id="line-atk-3" x1="100" y1="290" x2="300" y2="210" stroke="transparent" stroke-width="2" stroke-dasharray="6,4"/>
+
+        <!-- SCADA node -->
+        <rect x="145" y="35" width="110" height="40" rx="6" fill="#132033" stroke="var(--teal)" stroke-width="2"/>
+        <text x="200" y="60" text-anchor="middle" class="topo-node" fill="var(--teal)">SCADA</text>
+
+        <!-- ELV nodes -->
+        <rect id="topo-elv1-bg" x="45" y="165" width="110" height="40" rx="6" fill="#132033" stroke="var(--green)" stroke-width="2"/>
+        <text x="100" y="190" text-anchor="middle" class="topo-node" fill="var(--green)" id="topo-elv1-text">ELV-1</text>
+        <text x="100" y="220" text-anchor="middle" class="topo-label" id="topo-elv1-status">FL:1 IDLE</text>
+
+        <rect id="topo-elv2-bg" x="145" y="165" width="110" height="40" rx="6" fill="#132033" stroke="var(--blue)" stroke-width="2"/>
+        <text x="200" y="190" text-anchor="middle" class="topo-node" fill="var(--blue)" id="topo-elv2-text">ELV-2</text>
+        <text x="200" y="220" text-anchor="middle" class="topo-label" id="topo-elv2-status">FL:5 IDLE</text>
+
+        <rect id="topo-elv3-bg" x="245" y="165" width="110" height="40" rx="6" fill="#132033" stroke="var(--purple)" stroke-width="2"/>
+        <text x="300" y="190" text-anchor="middle" class="topo-node" fill="var(--purple)" id="topo-elv3-text">ELV-3</text>
+        <text x="300" y="220" text-anchor="middle" class="topo-label" id="topo-elv3-status">FL:10 IDLE</text>
+
+        <!-- Attacker node (hidden initially) -->
+        <g id="attackerNode" opacity="0" style="transition: opacity 0.8s">
+          <rect x="30" y="265" width="140" height="40" rx="6" fill="#1A0808" stroke="var(--red)" stroke-width="2">
+            <animate attributeName="stroke-opacity" values="1;0.4;1" dur="2s" repeatCount="indefinite"/>
+          </rect>
+          <text x="100" y="290" text-anchor="middle" class="topo-node" fill="var(--redl)">ATTACKER</text>
+        </g>
+
+        <!-- Packet dots container -->
+        <g id="packetDotsGroup"></g>
+      </svg>
+    </div>
+
+    <div class="event-log-panel">
+      <div class="event-log-header">Event Log</div>
+      <div class="event-log" id="eventLog"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Bottom bar: attack phase timeline ───────────────── -->
+<div class="bottom-bar">
+  <span class="timeline-label">Attack Phase</span>
+  <div class="phase-segment phase-seg-0 active" id="phase0">NORMAL</div>
+  <div class="phase-segment phase-seg-1" id="phase1">RECON</div>
+  <div class="phase-segment phase-seg-2" id="phase2">FLOOD</div>
+  <div class="phase-segment phase-seg-3" id="phase3">EXPLOIT</div>
+  <div class="phase-segment phase-seg-4" id="phase4">IMPACT</div>
+  <span class="downtime-ticker" id="downtimeTicker"></span>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────
+let ws = null;
+let connected = false;
+let muted = true;
+let audioCtx = null;
+let faultStartTimes = {};
+let prevPhase = 0;
+let lastEventCount = 0;
+let prevElevatorStates = {};
+let shakeTimeout = null;
+let sparkIntervals = {};
+let currentPhase = 0;
+
+const FLOORS = 10;
+const ELV_IDS = [1, 2, 3];
+const ELV_COLORS = { 1: 'var(--green)', 2: 'var(--blue)', 3: 'var(--purple)' };
+const ELV_COLOR_CLASSES = { 1: 'elv1', 2: 'elv2', 3: 'elv3' };
+
+// ── Init building structure ────────────────────────────────
+function initBuilding() {
+  const floors = document.getElementById('buildingFloors');
+  const ledRow = document.getElementById('ledRow');
+  const statsPanel = document.getElementById('statsPanel');
+
+  // Create shaft areas
+  for (let s = 1; s <= 3; s++) {
+    const shaftArea = document.createElement('div');
+    shaftArea.className = `shaft-area shaft-area-${s}`;
+    shaftArea.id = `shaftArea${s}`;
+    floors.appendChild(shaftArea);
+
+    // Emergency overlay per shaft
+    const emg = document.createElement('div');
+    emg.className = 'shaft-emergency';
+    emg.id = `shaftEmergency${s}`;
+    emg.innerHTML = `<div class="emergency-text">EMERGENCY</div><div class="emergency-timer" id="emergencyTimer${s}">00:00</div>`;
+    shaftArea.appendChild(emg);
+
+    // Flood overlay per shaft
+    const flood = document.createElement('div');
+    flood.className = 'shaft-flood-overlay';
+    flood.id = `shaftFlood${s}`;
+    shaftArea.appendChild(flood);
+  }
+
+  // Create floor rows with numbers and lobby dots
+  for (let f = 1; f <= FLOORS; f++) {
+    const row = document.createElement('div');
+    row.className = 'floor-row';
+    row.style.top = `${((FLOORS - f) / FLOORS) * 100}%`;
+    row.style.height = `${100 / FLOORS}%`;
+
+    const num = document.createElement('div');
+    num.className = 'floor-number';
+    num.textContent = f;
+    row.appendChild(num);
+    floors.appendChild(row);
+
+    // Lobby dots (one per shaft)
+    for (let s = 1; s <= 3; s++) {
+      const dot = document.createElement('div');
+      dot.className = 'lobby-dot';
+      dot.id = `lobby-${s}-${f}`;
+      dot.style.top = `${((FLOORS - f) / FLOORS) * 100 + (100 / FLOORS / 2) - 0.4}%`;
+      floors.appendChild(dot);
+    }
+  }
+
+  // Create elevator cars and cables
+  for (let s = 1; s <= 3; s++) {
+    // Cable
+    const cable = document.createElement('div');
+    cable.className = `car-cable car-cable-${s}`;
+    cable.id = `cable${s}`;
+    floors.appendChild(cable);
+
+    // Car
+    const car = document.createElement('div');
+    car.className = 'car';
+    car.id = `car${s}`;
+    const carColors = { 1: 'var(--green)', 2: 'var(--blue)', 3: 'var(--purple)' };
+    car.innerHTML = `
+      <div class="car-body">
+        <div class="car-roof-light" style="background:${carColors[s]}"></div>
+        <div class="car-door-left"></div>
+        <div class="car-door-right"></div>
+        <div class="car-label" style="color:${carColors[s]}">${s}</div>
+      </div>
+    `;
+    floors.appendChild(car);
+  }
+
+  // Create LED displays
+  for (let s = 1; s <= 3; s++) {
+    const led = document.createElement('div');
+    led.className = 'led-display';
+    led.innerHTML = `
+      <span class="led-label">ELV-${s}</span>
+      <span class="led-floor" id="ledFloor${s}">01</span>
+      <span class="led-arrow" id="ledArrow${s}"></span>
+    `;
+    ledRow.appendChild(led);
+  }
+
+  // Create stat cards
+  for (let s = 1; s <= 3; s++) {
+    const card = document.createElement('div');
+    card.className = 'stat-card';
+    card.id = `statCard${s}`;
+    card.innerHTML = `
+      <div class="stat-card-header">
+        <span class="stat-card-name ${ELV_COLOR_CLASSES[s]}">ELV-${s}</span>
+        <span class="target-badge" id="targetBadge${s}" style="display:none">TARGET</span>
+      </div>
+      <div class="stat-row"><span>Floor</span><span class="stat-val" id="statFloor${s}">1</span></div>
+      <div class="stat-row"><span>State</span><span id="statStateWrap${s}"><span class="stat-state state-idle" id="statState${s}">IDLE</span></span></div>
+      <div class="stat-row"><span>Fault</span><span class="stat-fault-code ok" id="statFault${s}">OK</span></div>
+      <div class="stat-queue-bar">
+        <div class="stat-queue-fill" id="statQueue${s}" style="width:0%;background:var(--green)"></div>
+        <div class="stat-queue-label" id="statQueueLabel${s}">0/8</div>
+      </div>
+    `;
+    statsPanel.appendChild(card);
+  }
+
+  // Position cars and cables initially
+  positionCars();
+}
+
+function positionCars() {
+  // Wait for layout, then position
+  requestAnimationFrame(() => {
+    const container = document.getElementById('buildingFloors');
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+    const floorH = rect.height / FLOORS;
+    const shaftW = (rect.width - 26) / 3;
+
+    for (let s = 1; s <= 3; s++) {
+      const car = document.getElementById(`car${s}`);
+      const cable = document.getElementById(`cable${s}`);
+      const startFloor = [1, 5, 10][s - 1];
+
+      // Car dimensions
+      const carH = floorH - 4;
+      const carW = shaftW - 12;
+      const carLeft = 26 + (s - 1) * shaftW + 6;
+      const carTop = ((FLOORS - startFloor) / FLOORS) * rect.height + 2;
+
+      car.style.height = carH + 'px';
+      car.style.width = carW + 'px';
+      car.style.left = carLeft + 'px';
+      car.style.top = carTop + 'px';
+
+      // Cable
+      cable.style.left = (carLeft + carW / 2) + 'px';
+      cable.style.top = '0px';
+      cable.style.height = carTop + 'px';
+
+      // Position lobby dots for this shaft
+      for (let f = 1; f <= FLOORS; f++) {
+        const dot = document.getElementById(`lobby-${s}-${f}`);
+        if (dot) dot.style.left = (carLeft - 8) + 'px';
+      }
+    }
+  });
+}
+
+// ── WebSocket connection ───────────────────────────────────
+function connect() {
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  ws = new WebSocket(`${proto}://${location.host}/ws`);
+
+  ws.onopen = () => {
+    connected = true;
+    document.getElementById('connDot').className = 'conn-dot on';
+    document.getElementById('connLabel').textContent = 'Connected';
+  };
+
+  ws.onclose = () => {
+    connected = false;
+    document.getElementById('connDot').className = 'conn-dot off';
+    document.getElementById('connLabel').textContent = 'Disconnected';
+    setTimeout(connect, 2000);
+  };
+
+  ws.onerror = () => { ws.close(); };
+
+  ws.onmessage = (e) => {
+    try {
+      const data = JSON.parse(e.data);
+      if (data.type === 'state') updateDashboard(data);
+    } catch(err) {}
+  };
+}
+
+// ── Main update ────────────────────────────────────────────
+function updateDashboard(data) {
+  // Elapsed time
+  const secs = Math.floor(data.elapsed);
+  const m = Math.floor(secs / 60);
+  const s = secs % 60;
+  document.getElementById('elapsedTime').textContent = `${m}:${s.toString().padStart(2,'0')}`;
+
+  currentPhase = data.attack_phase;
+
+  // Update each elevator
+  data.elevators.forEach(elv => {
+    updateCar(elv);
+    updateStatCard(elv);
+    updateLED(elv);
+    updateTopoNode(elv);
+  });
+
+  // Attack phase
+  updatePhase(data.attack_phase);
+
+  // Network topology
+  updateTopology(data);
+
+  // Event log
+  updateEventLog(data.events);
+
+  // Downtime
+  updateDowntime(data.elevators);
+
+  // Building effects
+  updateBuildingEffects(data);
+
+  // Header border color
+  const headerBorderColors = ['var(--teal)', 'var(--amber)', '#E74C3C', 'var(--red)', '#8B0000'];
+  document.getElementById('header').style.borderBottomColor = headerBorderColors[data.attack_phase] || 'var(--teal)';
+}
+
+// ── Car position update ────────────────────────────────────
+function updateCar(elv) {
+  const id = elv.id;
+  const car = document.getElementById(`car${id}`);
+  const cable = document.getElementById(`cable${id}`);
+  const container = document.getElementById('buildingFloors');
+  if (!car || !container) return;
+
+  const rect = container.getBoundingClientRect();
+  const floorH = rect.height / FLOORS;
+  const shaftW = (rect.width - 26) / 3;
+
+  // Car position
+  let carTop = ((FLOORS - elv.floor) / FLOORS) * rect.height + 2;
+
+  // Fault: offset half-floor for "stuck between floors" drama
+  const isFaulted = elv.state === 'LOCKED_FAULT' || elv.state === 'FAULT';
+  if (isFaulted && !car.dataset.stuckOffset) {
+    car.dataset.stuckOffset = (Math.random() * 0.3 + 0.1) * floorH;
+  }
+  if (isFaulted && car.dataset.stuckOffset) {
+    carTop += parseFloat(car.dataset.stuckOffset);
+  }
+  if (!isFaulted) {
+    delete car.dataset.stuckOffset;
+  }
+
+  car.style.top = carTop + 'px';
+
+  // Cable from top to car
+  cable.style.height = carTop + 'px';
+
+  // Car classes
+  const prevState = prevElevatorStates[id];
+  car.className = 'car';
+  cable.className = 'car-cable';
+
+  if (isFaulted) {
+    car.classList.add('fault');
+    cable.classList.add('fault');
+
+    // Screen shake on transition
+    if (prevState && prevState !== 'LOCKED_FAULT' && prevState !== 'FAULT') {
+      triggerScreenShake();
+      playAlarm();
+      startSparks(id);
+    }
+
+    if (!faultStartTimes[id]) faultStartTimes[id] = Date.now();
+
+    // Show emergency overlay
+    const emg = document.getElementById(`shaftEmergency${id}`);
+    if (emg) emg.classList.add('active');
+  } else if (elv.door === 1) {
+    car.classList.add('doors-open');
+
+    if (prevState === 'LOCKED_FAULT' || prevState === 'FAULT') {
+      playRecovery();
+      delete faultStartTimes[id];
+      stopSparks(id);
+    }
+    if (prevState === 'MOVING_UP' || prevState === 'MOVING_DOWN') {
+      playDing();
+    }
+
+    // Hide emergency
+    const emg = document.getElementById(`shaftEmergency${id}`);
+    if (emg) emg.classList.remove('active');
+  } else {
+    if (prevState === 'LOCKED_FAULT' || prevState === 'FAULT') {
+      playRecovery();
+      delete faultStartTimes[id];
+      stopSparks(id);
+    }
+    const emg = document.getElementById(`shaftEmergency${id}`);
+    if (emg) emg.classList.remove('active');
+  }
+
+  prevElevatorStates[id] = elv.state;
+
+  // Lobby dots
+  for (let f = 1; f <= FLOORS; f++) {
+    const dot = document.getElementById(`lobby-${id}-${f}`);
+    if (!dot) continue;
+    if (f === elv.floor) {
+      if (isFaulted) {
+        dot.className = 'lobby-dot fault-present';
+      } else {
+        dot.className = 'lobby-dot present';
+      }
+    } else {
+      dot.className = 'lobby-dot';
+    }
+  }
+}
+
+// ── Stat card update ───────────────────────────────────────
+function updateStatCard(elv) {
+  const id = elv.id;
+  const card = document.getElementById(`statCard${id}`);
+  const isFaulted = elv.state === 'LOCKED_FAULT' || elv.state === 'FAULT';
+
+  // Card border
+  if (isFaulted) {
+    card.classList.add('fault');
+  } else {
+    card.classList.remove('fault');
+  }
+
+  // Dynamic TARGET badge — show when this elevator is under attack
+  const badge = document.getElementById(`targetBadge${id}`);
+  if (badge) {
+    const isTarget = isFaulted || (currentPhase >= 1 && elv.queue_depth > elv.queue_max * 0.3);
+    badge.style.display = isTarget ? 'inline' : 'none';
+  }
+
+  // Floor
+  document.getElementById(`statFloor${id}`).textContent = elv.floor;
+
+  // State badge
+  const stateEl = document.getElementById(`statState${id}`);
+  stateEl.textContent = elv.state;
+  stateEl.className = 'stat-state';
+  if (isFaulted) stateEl.classList.add('state-fault');
+  else if (elv.state === 'MOVING_UP' || elv.state === 'MOVING_DOWN') stateEl.classList.add('state-moving');
+  else if (elv.state === 'DOOR_OPEN' || elv.state === 'DOOR_CLOSING') stateEl.classList.add('state-doors');
+  else stateEl.classList.add('state-idle');
+
+  // Fault code
+  const faultEl = document.getElementById(`statFault${id}`);
+  if (elv.fault !== 0) {
+    faultEl.textContent = '0x' + elv.fault.toString(16).toUpperCase().padStart(2, '0');
+    faultEl.className = 'stat-fault-code err';
+  } else {
+    faultEl.textContent = 'OK';
+    faultEl.className = 'stat-fault-code ok';
+  }
+
+  // Queue
+  const fill = elv.queue_depth / elv.queue_max;
+  const qFill = document.getElementById(`statQueue${id}`);
+  const qLabel = document.getElementById(`statQueueLabel${id}`);
+  qFill.style.width = (fill * 100) + '%';
+  qLabel.textContent = `${elv.queue_depth}/${elv.queue_max}`;
+  if (fill < 0.5) qFill.style.background = 'var(--green)';
+  else if (fill < 0.8) qFill.style.background = 'var(--amber)';
+  else qFill.style.background = 'var(--redl)';
+}
+
+// ── LED display update ─────────────────────────────────────
+function updateLED(elv) {
+  const id = elv.id;
+  const ledFloor = document.getElementById(`ledFloor${id}`);
+  const ledArrow = document.getElementById(`ledArrow${id}`);
+  const isFaulted = elv.state === 'LOCKED_FAULT' || elv.state === 'FAULT';
+
+  ledFloor.textContent = elv.floor.toString().padStart(2, '0');
+
+  if (isFaulted) {
+    ledFloor.classList.add('fault');
+    ledArrow.classList.add('fault');
+    ledArrow.textContent = '!!';
+  } else {
+    ledFloor.classList.remove('fault');
+    ledArrow.classList.remove('fault');
+    if (elv.direction === 1) ledArrow.innerHTML = '&#9650;';
+    else if (elv.direction === -1) ledArrow.innerHTML = '&#9660;';
+    else ledArrow.textContent = '';
+  }
+}
+
+// ── Topology node update ───────────────────────────────────
+function updateTopoNode(elv) {
+  const id = elv.id;
+  const statusEl = document.getElementById(`topo-elv${id}-status`);
+  if (statusEl) statusEl.textContent = `FL:${elv.floor} ${elv.state}`;
+
+  const bg = document.getElementById(`topo-elv${id}-bg`);
+  const txt = document.getElementById(`topo-elv${id}-text`);
+  const isFaulted = elv.state === 'LOCKED_FAULT' || elv.state === 'FAULT';
+
+  if (bg && txt) {
+    if (isFaulted) {
+      bg.setAttribute('stroke', 'var(--red)');
+      bg.setAttribute('fill', '#1A0808');
+      txt.setAttribute('fill', 'var(--redl)');
+    } else {
+      const colors = { 1: 'var(--green)', 2: 'var(--blue)', 3: 'var(--purple)' };
+      bg.setAttribute('stroke', colors[id] || 'var(--green)');
+      bg.setAttribute('fill', '#132033');
+      txt.setAttribute('fill', colors[id] || 'var(--green)');
+    }
+  }
+
+  // Show/hide attack line to this specific elevator
+  const atkLine = document.getElementById(`line-atk-${id}`);
+  if (atkLine) {
+    const isTarget = isFaulted || elv.queue_depth > elv.queue_max * 0.3;
+    if (currentPhase >= 1 && isTarget) {
+      atkLine.setAttribute('stroke', 'var(--red)');
+    } else if (currentPhase < 1 || !isTarget) {
+      atkLine.setAttribute('stroke', 'transparent');
+    }
+  }
+}
+
+// ── Attack phase timeline ──────────────────────────────────
+function updatePhase(phase) {
+  for (let i = 0; i <= 4; i++) {
+    const el = document.getElementById(`phase${i}`);
+    el.classList.remove('active', 'passed');
+    if (i === phase) el.classList.add('active');
+    else if (i < phase) el.classList.add('passed');
+  }
+
+  // Show attacker node
+  const atkNode = document.getElementById('attackerNode');
+  if (phase >= 1) {
+    atkNode.setAttribute('opacity', '1');
+  } else {
+    atkNode.setAttribute('opacity', '0');
+    for (let i = 1; i <= 3; i++) {
+      document.getElementById(`line-atk-${i}`).setAttribute('stroke', 'transparent');
+    }
+  }
+
+  // Sound for phase transitions
+  if (phase !== prevPhase) {
+    if (phase === 1) playHeartbeat();
+    if (phase === 2) playFloodTick();
+    prevPhase = phase;
+  }
+}
+
+// ── Building-level effects ─────────────────────────────────
+function updateBuildingEffects(data) {
+  const building = document.getElementById('building');
+  const phase = data.attack_phase;
+  const anyFaulted = data.elevators.some(e => e.state === 'LOCKED_FAULT' || e.state === 'FAULT');
+
+  // Recon scan-line
+  if (phase === 1) {
+    building.classList.add('recon');
+  } else {
+    building.classList.remove('recon');
+  }
+
+  // Emergency lighting
+  if (anyFaulted || phase >= 3) {
+    building.classList.add('emergency');
+  } else {
+    building.classList.remove('emergency');
+  }
+
+  // Flood overlay on shafts with high queue depth
+  for (let s = 1; s <= 3; s++) {
+    const floodEl = document.getElementById(`shaftFlood${s}`);
+    if (floodEl) {
+      const elv = data.elevators.find(e => e.id === s);
+      if (phase === 2 && elv && elv.queue_depth > elv.queue_max * 0.3) {
+        floodEl.style.display = 'block';
+      } else {
+        floodEl.style.display = 'none';
+      }
+    }
+  }
+}
+
+// ── Spark particles ────────────────────────────────────────
+function startSparks(elvId) {
+  if (sparkIntervals[elvId]) return;
+  sparkIntervals[elvId] = setInterval(() => {
+    const car = document.getElementById(`car${elvId}`);
+    const container = document.getElementById('buildingFloors');
+    if (!car || !container) return;
+
+    const carRect = car.getBoundingClientRect();
+    const containerRect = container.getBoundingClientRect();
+
+    for (let i = 0; i < 3; i++) {
+      const spark = document.createElement('div');
+      spark.className = 'spark';
+      const sx = (Math.random() - 0.5) * 20;
+      const sy = Math.random() * 30 + 10;
+      spark.style.setProperty('--sx', sx + 'px');
+      spark.style.setProperty('--sy', sy + 'px');
+      spark.style.left = (carRect.left - containerRect.left + Math.random() * carRect.width) + 'px';
+      spark.style.top = (carRect.bottom - containerRect.top - 2) + 'px';
+      container.appendChild(spark);
+      setTimeout(() => spark.remove(), 1200);
+    }
+  }, 800);
+}
+
+function stopSparks(elvId) {
+  if (sparkIntervals[elvId]) {
+    clearInterval(sparkIntervals[elvId]);
+    delete sparkIntervals[elvId];
+  }
+}
+
+// ── Network topology packet animation ──────────────────────
+function updateTopology(data) {
+  const pkts = data.network_packets || [];
+  if (pkts.length > 0 && Math.random() < 0.4) {
+    const pkt = pkts[pkts.length - 1];
+    // Determine target elevator ID from packet
+    let targetId = 1;
+    const targetMatch = (pkt.target || '').match(/ELV-(\d)/);
+    if (targetMatch) targetId = parseInt(targetMatch[1]);
+    spawnPacketDot(pkt.type === 'attack' ? 'var(--redl)' : 'var(--teal)', pkt.type === 'attack', targetId);
+  }
+}
+
+function spawnPacketDot(color, isAttack, targetId) {
+  const group = document.getElementById('packetDotsGroup');
+  const elvX = { 1: 100, 2: 200, 3: 300 };
+  let x1, y1, x2, y2;
+  if (isAttack) {
+    x1 = 100; y1 = 270; x2 = elvX[targetId] || 100; y2 = 200;
+  } else {
+    const tx = elvX[targetId] || elvX[Math.ceil(Math.random() * 3)];
+    x1 = 200; y1 = 70; x2 = tx; y2 = 180;
+  }
+
+  const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  circle.setAttribute('r', isAttack ? '5' : '3');
+  circle.setAttribute('fill', color);
+  circle.setAttribute('cx', x1);
+  circle.setAttribute('cy', y1);
+  group.appendChild(circle);
+
+  const duration = isAttack ? 400 : 800;
+  const start = performance.now();
+  function animate(now) {
+    const t = Math.min((now - start) / duration, 1);
+    circle.setAttribute('cx', x1 + (x2 - x1) * t);
+    circle.setAttribute('cy', y1 + (y2 - y1) * t);
+    circle.setAttribute('opacity', 1 - t * 0.5);
+    if (t < 1) {
+      requestAnimationFrame(animate);
+    } else {
+      group.removeChild(circle);
+    }
+  }
+  requestAnimationFrame(animate);
+}
+
+// ── Event log ──────────────────────────────────────────────
+function updateEventLog(events) {
+  const log = document.getElementById('eventLog');
+  if (!events || events.length === 0) return;
+
+  const newEvents = events.slice(lastEventCount);
+  lastEventCount = events.length;
+
+  newEvents.forEach(ev => {
+    const line = document.createElement('div');
+    line.className = 'event-line';
+    const isAttack = ev.type === 'attack' || ev.source === 'ATTACKER';
+    if (isAttack) line.classList.add('attack-event');
+
+    const sourceClass = `ev-source-${ev.source.replace(/\s/g,'-')}`;
+    const cleanMsg = ev.msg.replace(/\[ATTACK\]/g, '').replace(/\[IMPACT\]/g, '').trim();
+    const truncated = cleanMsg.length > 90 ? cleanMsg.substring(0, 87) + '...' : cleanMsg;
+    line.innerHTML = `<span class="ev-time">${ev.time}</span> <span class="${sourceClass}">[${ev.source}]</span> ${truncated}`;
+    log.appendChild(line);
+  });
+
+  log.scrollTop = log.scrollHeight;
+
+  while (log.children.length > 100) {
+    log.removeChild(log.firstChild);
+  }
+}
+
+// ── Downtime counters ──────────────────────────────────────
+function updateDowntime(elevators) {
+  const ticker = document.getElementById('downtimeTicker');
+  const faulted = elevators.filter(e => e.state === 'LOCKED_FAULT' || e.state === 'FAULT');
+
+  if (faulted.length === 0) {
+    ticker.textContent = '';
+    return;
+  }
+
+  const parts = faulted.map(e => {
+    const start = faultStartTimes[e.id] || Date.now();
+    const elapsed = Math.floor((Date.now() - start) / 1000);
+    const m = Math.floor(elapsed / 60);
+    const s = elapsed % 60;
+    const timeStr = `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+
+    // Update emergency timer
+    const timer = document.getElementById(`emergencyTimer${e.id}`);
+    if (timer) timer.textContent = timeStr;
+
+    return `ELV-${e.id} ${timeStr}`;
+  });
+  ticker.textContent = parts.join(' | ');
+}
+
+// ── Screen shake ───────────────────────────────────────────
+function triggerScreenShake() {
+  const main = document.getElementById('mainContent');
+  main.classList.add('screen-shake');
+  if (shakeTimeout) clearTimeout(shakeTimeout);
+  shakeTimeout = setTimeout(() => main.classList.remove('screen-shake'), 300);
+}
+
+// ── Sound effects (Web Audio API) ──────────────────────────
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+function playDing() {
+  if (muted) return;
+  const ctx = getAudioCtx();
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(1200, ctx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(800, ctx.currentTime + 0.15);
+  gain.gain.setValueAtTime(0.15, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+  osc.connect(gain).connect(ctx.destination);
+  osc.start(); osc.stop(ctx.currentTime + 0.3);
+}
+
+function playAlarm() {
+  if (muted) return;
+  const ctx = getAudioCtx();
+  for (let i = 0; i < 3; i++) {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sawtooth';
+    const t = ctx.currentTime + i * 0.25;
+    osc.frequency.setValueAtTime(440, t);
+    osc.frequency.setValueAtTime(880, t + 0.12);
+    gain.gain.setValueAtTime(0.2, t);
+    gain.gain.setValueAtTime(0.0, t + 0.22);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(t); osc.stop(t + 0.25);
+  }
+}
+
+function playHeartbeat() {
+  if (muted) return;
+  const ctx = getAudioCtx();
+  for (let i = 0; i < 4; i++) {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = 60;
+    const t = ctx.currentTime + i * 0.8;
+    gain.gain.setValueAtTime(0.0, t);
+    gain.gain.linearRampToValueAtTime(0.2, t + 0.05);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(t); osc.stop(t + 0.4);
+  }
+}
+
+function playFloodTick() {
+  if (muted) return;
+  const ctx = getAudioCtx();
+  for (let i = 0; i < 12; i++) {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'square';
+    osc.frequency.value = 2000 + Math.random() * 2000;
+    const t = ctx.currentTime + i * (0.15 - i * 0.008);
+    gain.gain.setValueAtTime(0.08, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(t); osc.stop(t + 0.06);
+  }
+}
+
+function playRecovery() {
+  if (muted) return;
+  const ctx = getAudioCtx();
+  [400, 500, 600, 800, 1000].forEach((f, i) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = f;
+    const t = ctx.currentTime + i * 0.1;
+    gain.gain.setValueAtTime(0.12, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(t); osc.stop(t + 0.25);
+  });
+}
+
+function toggleMute() {
+  muted = !muted;
+  document.getElementById('muteBtn').textContent = muted ? 'UNMUTE' : 'MUTE';
+  if (!muted && audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+}
+
+// ── Normal operation packet spawner ────────────────────────
+setInterval(() => {
+  if (connected) spawnPacketDot('var(--teal)', false);
+}, 2000);
+
+// ── Resize handler ─────────────────────────────────────────
+window.addEventListener('resize', () => positionCars());
+
+// ── Init ───────────────────────────────────────────────────
+initBuilding();
+connect();
+</script>
+</body>
+</html>

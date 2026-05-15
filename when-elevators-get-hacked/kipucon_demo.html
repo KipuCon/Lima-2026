@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OT Cyber Demo — Elevator Attack | Sec-Llama / KipuCon</title>
+<style>
+  :root {
+    --bg:       #0D1B2A;
+    --bg2:      #132033;
+    --bg3:      #1E3048;
+    --border:   #2D4A6A;
+    --text:     #D5E0EE;
+    --muted:    #7F8FA6;
+    --red:      #C0392B;
+    --redl:     #E74C3C;
+    --amber:    #E67E22;
+    --teal:     #1ABC9C;
+    --blue:     #3498DB;
+    --green:    #27AE60;
+    --code-bg:  #1A2E42;
+    --code-txt: #5DADE2;
+    --font-mono: 'Consolas', 'Monaco', monospace;
+    --font-sans: -apple-system, 'Segoe UI', sans-serif;
+    --radius: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--font-sans); font-size: 15px; line-height: 1.6; }
+
+  header { background: var(--bg2); border-bottom: 3px solid var(--red); padding: 20px 32px; display: flex; align-items: center; justify-content: space-between; }
+  header h1 { font-size: 20px; font-weight: 700; color: #fff; letter-spacing: .04em; }
+  header .sub { font-size: 13px; color: var(--muted); margin-top: 2px; }
+  .badge { background: var(--red); color: #fff; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 4px; letter-spacing: .06em; }
+
+  .tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); background: var(--bg2); padding: 0 32px; }
+  .tab { padding: 12px 22px; font-size: 13px; font-weight: 500; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; background: none; border-top: none; border-left: none; border-right: none; transition: color .15s, border-color .15s; }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: #fff; border-bottom-color: var(--teal); }
+
+  .panel { display: none; padding: 28px 32px; max-width: 1100px; }
+  .panel.active { display: block; }
+
+  /* Architecture */
+  .layer-section { margin-bottom: 10px; }
+  .layer-label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 8px; }
+  .layer-inner { border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; background: var(--bg2); }
+  .layer-inner.teal { border-color: #0D4035; }
+  .layer-inner.blue { border-color: #1A3050; }
+  .layer-inner.gray { border-color: var(--border); }
+  .boxes-row { display: flex; gap: 10px; }
+  .box { flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px; }
+  .box.target { border-color: var(--red); border-width: 2px; background: #1A0808; }
+  .box.danger { border-color: var(--red); background: #1A0808; }
+  .box-title { font-size: 13px; font-weight: 600; color: #fff; margin-bottom: 3px; }
+  .box-sub { font-size: 11px; color: var(--muted); line-height: 1.5; }
+  .box.target .box-title { color: var(--redl); }
+  .box.danger .box-sub { font-family: var(--font-mono); color: var(--redl); }
+  .conn { text-align: center; padding: 6px 0; font-size: 12px; color: var(--amber); font-style: italic; }
+  .target-badge { display: inline-block; background: var(--red); color: #fff; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 3px; margin-bottom: 4px; }
+
+  .reg-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 20px; }
+  .reg-table th { text-align: left; padding: 8px 12px; font-size: 11px; color: var(--muted); border-bottom: 1px solid var(--border); font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
+  .reg-table td { padding: 7px 12px; border-bottom: 1px solid #1A2E42; }
+  .reg-table tr.hit td { background: #1A0808; color: var(--redl); font-family: var(--font-mono); font-size: 12px; font-weight: 700; }
+  .reg-table tr:not(.hit) td:first-child { font-family: var(--font-mono); font-size: 12px; color: var(--code-txt); }
+  .reg-table tr:not(.hit) td { color: var(--text); }
+
+  /* State machine */
+  .states { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 16px 0; }
+  .state { border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; background: var(--bg2); }
+  .state-name { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+  .state-desc { font-size: 12px; color: var(--muted); line-height: 1.5; }
+  .state.idle { border-color: #0D4035; } .state.idle .state-name { color: var(--teal); }
+  .state.move { border-color: #1A3050; } .state.move .state-name { color: var(--blue); }
+  .state.door { border-color: #3D2800; } .state.door .state-name { color: var(--amber); }
+  .state.fault { border-color: #5A1010; } .state.fault .state-name { color: var(--redl); }
+  .state.locked { border-color: var(--red); border-width: 2px; grid-column: span 2; background: #120808; }
+  .state.locked .state-name { color: var(--red); font-size: 14px; }
+
+  code { font-family: var(--font-mono); font-size: 12px; background: var(--code-bg); color: var(--code-txt); padding: 12px 16px; border-radius: var(--radius); display: block; white-space: pre; border: 1px solid var(--border); overflow-x: auto; margin: 12px 0; line-height: 1.7; }
+
+  /* Attack stepper */
+  .stepper { display: flex; flex-direction: column; gap: 0; }
+  .step { border-left: 2px solid var(--border); padding: 0 0 28px 24px; position: relative; }
+  .step:last-child { padding-bottom: 0; border-left-color: transparent; }
+  .step::before { content: ''; width: 12px; height: 12px; border-radius: 50%; position: absolute; left: -7px; top: 3px; }
+  .step.s1::before, .step.s1 { border-left-color: var(--amber); } .step.s1::before { background: var(--amber); }
+  .step.s2::before, .step.s2 { border-left-color: var(--redl); } .step.s2::before { background: var(--redl); }
+  .step.s3::before, .step.s3 { border-left-color: var(--red); } .step.s3::before { background: var(--red); }
+  .step.s4::before, .step.s4 { border-left-color: #8B0000; } .step.s4::before { background: #8B0000; }
+  .phase-pill { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 9px; border-radius: 10px; margin-bottom: 6px; letter-spacing: .05em; }
+  .p1 { background: #3D2800; color: var(--amber); }
+  .p2 { background: #2A0A0A; color: var(--redl); }
+  .p3 { background: #1A0505; color: var(--red); }
+  .p4 { background: #120303; color: #E74C3C; }
+  .step-title { font-size: 17px; font-weight: 700; color: #fff; margin-bottom: 6px; }
+  .step-body { font-size: 13px; color: var(--muted); line-height: 1.7; }
+  .impact-box { background: #120808; border: 1px solid var(--red); border-radius: var(--radius); padding: 14px 18px; margin-top: 16px; }
+  .impact-title { font-size: 13px; font-weight: 700; color: var(--red); margin-bottom: 6px; }
+  .impact-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 12px; }
+  .stat { background: var(--bg3); border-radius: var(--radius); padding: 12px; text-align: center; border: 1px solid var(--border); }
+  .stat-n { font-size: 26px; font-weight: 900; color: var(--redl); }
+  .stat-l { font-size: 11px; color: var(--muted); margin-top: 3px; }
+
+  /* Defense */
+  .def-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 8px; }
+  .def-card { background: var(--bg2); border: 1px solid #0D4035; border-radius: var(--radius); padding: 14px 16px; border-left: 4px solid var(--teal); }
+  .def-card.dark { border-left-color: #0B7A63; }
+  .def-n { font-size: 12px; font-weight: 700; color: var(--teal); margin-bottom: 4px; }
+  .def-title { font-size: 14px; font-weight: 700; color: #fff; margin-bottom: 6px; }
+  .def-body { font-size: 12px; color: var(--muted); line-height: 1.6; }
+
+  footer { background: var(--bg2); border-top: 1px solid var(--border); padding: 14px 32px; font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; align-items: center; }
+  footer strong { color: var(--text); }
+
+  h2 { font-size: 18px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+  .lead { font-size: 13px; color: var(--muted); margin-bottom: 20px; font-style: italic; }
+
+  @media (max-width: 700px) {
+    .boxes-row { flex-direction: column; }
+    .states, .def-grid, .impact-grid { grid-template-columns: 1fr; }
+    .state.locked { grid-column: span 1; }
+    header { flex-direction: column; align-items: flex-start; gap: 8px; }
+    .panel { padding: 20px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>OT Cyber Security — Elevator Attack Demo</h1>
+    <div class="sub">Sec-Llama &nbsp;·&nbsp; KipuCon Conference &nbsp;·&nbsp; Lima, Peru</div>
+  </div>
+  <span class="badge">DEMO</span>
+</header>
+
+<div class="tabs">
+  <button class="tab active" onclick="show('arch', this)">System architecture</button>
+  <button class="tab" onclick="show('state', this)">PLC state machine</button>
+  <button class="tab" onclick="show('attack', this)">Attack flow</button>
+  <button class="tab" onclick="show('defense', this)">Defense</button>
+</div>
+
+<!-- ── Architecture ──────────────────────────────────────────────────── -->
+<div id="arch" class="panel active">
+  <h2>System architecture</h2>
+  <p class="lead">Three-layer OT stack: SCADA dispatcher → PLC controllers → physical I/O. All connected via unauthenticated Modbus/TCP.</p>
+
+  <div class="layer-section">
+    <div class="layer-label">SCADA / HMI layer</div>
+    <div class="layer-inner teal">
+      <div class="boxes-row">
+        <div class="box">
+          <div class="box-title">Dispatcher (SCADA)</div>
+          <div class="box-sub">Polls all PLCs every 100ms via Modbus/TCP. Assigns nearest-car algorithm to incoming floor calls.</div>
+        </div>
+        <div class="box">
+          <div class="box-title">HMI status board</div>
+          <div class="box-sub">Reads HR0–HR7 registers from each PLC every 6s. Displays floor, state, queue depth, fault code.</div>
+        </div>
+        <div class="box">
+          <div class="box-title">BACnet/Modbus gateway</div>
+          <div class="box-sub">Bridges building management network to elevator PLC subnet. Often the initial attack entry point.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="conn">↕ &nbsp; Modbus/TCP — no authentication, no encryption — &nbsp;↕</div>
+
+  <div class="layer-section">
+    <div class="layer-label">PLC layer (3 independent threads)</div>
+    <div class="layer-inner blue">
+      <div class="boxes-row">
+        <div class="box target">
+          <div class="target-badge">TARGET</div>
+          <div class="box-title">ELV-1 PLC</div>
+          <div class="box-sub">Start: FL 1 &nbsp;·&nbsp; cmd_queue max=8<br>Independent thread + state machine</div>
+        </div>
+        <div class="box">
+          <div class="box-title">ELV-2 PLC</div>
+          <div class="box-sub">Start: FL 5 &nbsp;·&nbsp; Nearest-car candidate<br>Independent thread + state machine</div>
+        </div>
+        <div class="box">
+          <div class="box-title">ELV-3 PLC</div>
+          <div class="box-sub">Start: FL 10 &nbsp;·&nbsp; Top coverage<br>Independent thread + state machine</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="conn">↕ &nbsp; Register map HR0–HR7 (Modbus holding registers) — &nbsp;↕</div>
+
+  <div class="layer-section">
+    <div class="layer-label">Physical I/O</div>
+    <div class="layer-inner gray">
+      <div class="boxes-row">
+        <div class="box">
+          <div class="box-title">Floor sensors</div>
+          <div class="box-sub">HR0: current_floor (1–10)<br>Updated each 0.6s travel tick</div>
+        </div>
+        <div class="box">
+          <div class="box-title">Door actuators</div>
+          <div class="box-sub">HR2: 0=closed, 1=open, 2=closing<br>1.2s dwell time on open</div>
+        </div>
+        <div class="box danger">
+          <div class="box-title" style="color:var(--redl)">Fault register ⚠</div>
+          <div class="box-sub">HR4: 0x00=OK — read/write, no auth<br>Direct write = LOCKED_FAULT</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <table class="reg-table">
+    <tr><th>Register</th><th>Name</th><th>Access</th><th>Description</th></tr>
+    <tr><td>HR0</td><td>current_floor</td><td>Read</td><td>Live floor position (1–10)</td></tr>
+    <tr><td>HR1</td><td>target_floor</td><td>Read</td><td>Active destination from last command</td></tr>
+    <tr><td>HR2</td><td>door_status</td><td>Read</td><td>0=closed, 1=open, 2=closing</td></tr>
+    <tr><td>HR3</td><td>direction</td><td>Read</td><td>0=idle, 1=up, -1=down</td></tr>
+    <tr class="hit"><td>HR4 ⚠</td><td>fault_code</td><td>READ / WRITE</td><td>0x00=OK — writable over network, no authentication required</td></tr>
+    <tr><td>HR5</td><td>cmd_queue_depth</td><td>Read</td><td>Buffer fill level (max 8 slots)</td></tr>
+    <tr><td>HR6</td><td>cycle_count</td><td>Read</td><td>PLC heartbeat scan counter</td></tr>
+    <tr><td>HR7</td><td>state_id</td><td>Read</td><td>Current state machine enum value</td></tr>
+  </table>
+</div>
+
+<!-- ── State machine ─────────────────────────────────────────────────── -->
+<div id="state" class="panel">
+  <h2>PLC state machine</h2>
+  <p class="lead">Each elevator runs an independent 100ms scan loop. The attack bypasses the state machine entirely via a direct register write.</p>
+
+  <div class="states">
+    <div class="state idle"><div class="state-name">IDLE</div><div class="state-desc">Waiting. Dequeues one floor command per scan cycle.</div></div>
+    <div class="state move"><div class="state-name">MOVING_UP</div><div class="state-desc">Advances floor+1 every 0.6s until target reached.</div></div>
+    <div class="state move"><div class="state-name">MOVING_DOWN</div><div class="state-desc">Advances floor-1 every 0.6s until target reached.</div></div>
+    <div class="state door"><div class="state-name">DOOR_OPEN</div><div class="state-desc">Holds doors open 1.2s. HR2=1.</div></div>
+    <div class="state door"><div class="state-name">DOOR_CLOSING</div><div class="state-desc">0.4s transition. HR2=2 → 0, back to IDLE.</div></div>
+    <div class="state fault"><div class="state-name">FAULT</div><div class="state-desc">Auto-recovery after 3s. Clears HR4.</div></div>
+    <div class="state locked"><div class="state-name">LOCKED_FAULT ← attack outcome</div><div class="state-desc">Terminal state. Set by direct HR4 write (Modbus FC=6). No auto-recovery path. Physical technician reset required.</div></div>
+    <div class="state idle" style="border-color:#9FE1CB"><div class="state-name">DOOR_CLOSING → IDLE</div><div class="state-desc">Normal loop-back. Dequeues next cmd.</div></div>
+  </div>
+
+  <code>Normal loop:  IDLE → MOVING_UP/DOWN → IDLE → DOOR_OPEN → DOOR_CLOSING → IDLE
+Attack path:  IDLE → LOCKED_FAULT  (HR4 write — skips state machine entirely)</code>
+
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-top:4px;">
+    <div style="font-size:13px;font-weight:700;color:var(--amber);margin-bottom:8px;">Why the queue matters</div>
+    <div style="font-size:13px;color:var(--muted);line-height:1.8;">
+      The buffer is capped at 8 slots — realistic for embedded PLC hardware. SCADA writes to the queue; the PLC drains it one command per IDLE cycle.
+      Buffer overflow drops commands <em>silently</em> — no error propagates back to SCADA.
+      An attacker can saturate the queue so legitimate floor calls are never processed — the elevator becomes unresponsive without triggering a visible fault.
+    </div>
+  </div>
+</div>
+
+<!-- ── Attack flow ───────────────────────────────────────────────────── -->
+<div id="attack" class="panel">
+  <h2>Attack flow — 3 phases, one target</h2>
+  <p class="lead">ELV-1 is taken offline. ELV-2 and ELV-3 remain operational — a realistic partial-compromise scenario.</p>
+
+  <div class="stepper">
+    <div class="step s1">
+      <div class="phase-pill p1">PHASE 1 — Passive recon</div>
+      <div class="step-title">Sniff Modbus/TCP poll traffic</div>
+      <div class="step-body">Attacker sits on the flat OT network. SCADA polls HR0–HR7 from every PLC every 100ms — unauthenticated, unencrypted. Attacker reads current floor, queue depth, fault register address, and cycle counter from passive observation alone.</div>
+      <code>Sniffed Modbus/TCP poll → ELV-1
+HR0=current_floor:1   HR1=target:1
+HR4=fault_code:0x00   HR5=queue:0
+No authentication required.</code>
+    </div>
+
+    <div class="step s2">
+      <div class="phase-pill p2">PHASE 2 — Command buffer flood</div>
+      <div class="step-title">Saturate the PLC cmd_queue (DoS)</div>
+      <div class="step-body">Attacker sends rapid Modbus FC=15 (Write Multiple Registers) commands with random floor values. The 8-slot buffer fills. Legitimate SCADA floor calls are now dropped. The elevator starts bouncing to attacker-supplied floors — erratic but not yet faulted.</div>
+      <code>[ATTACKER] WRITE FC=15 → floor=07  [ACCEPTED]
+[ATTACKER] WRITE FC=15 → floor=03  [ACCEPTED]
+...
+[ELV-1]    CMD BUFFER OVERFLOW — command dropped
+[ATTACKER] WRITE FC=15 → floor=09  [DROPPED]
+[SCADA]    CALL floor 5 → ELV-1   [REJECTED]
+[SCADA]    CALL floor 5 → ELV-2   [OK]  ← fallback</code>
+    </div>
+
+    <div class="step s3">
+      <div class="phase-pill p3">PHASE 3 — Register write exploit</div>
+      <div class="step-title">Write fault_code=0x10 to HR4</div>
+      <div class="step-body">A single Modbus Write Single Register packet (FC=6) targets HR4. No authentication. No input validation. fault_code 0x10 = critical controller error. The PLC transitions to LOCKED_FAULT immediately — bypassing the entire state machine.</div>
+      <code>WRITE FC=6  addr=HR4  value=0x10  → ELV-1 PLC
+Result: state = LOCKED_FAULT  (no auto-recovery)
+
+[ATTACK] ELV-1 FAULT REGISTER WRITTEN
+         fault_code=0x10 | Controller LOCKED</code>
+    </div>
+
+    <div class="step s4">
+      <div class="phase-pill p4">IMPACT</div>
+      <div class="step-title">ELV-1 locked — passengers trapped — manual reset required</div>
+      <div class="step-body">ELV-1 frozen between floors. Doors closed. SCADA HMI shows LOCKED_FAULT / 0x10. No auto-recovery. Only a technician at the physical controller cabinet can clear the fault. ELV-2 and ELV-3 absorb all traffic — building degraded but not halted.</div>
+    </div>
+  </div>
+
+  <div class="impact-box">
+    <div class="impact-title">Impact summary</div>
+    <div class="impact-grid">
+      <div class="stat"><div class="stat-n">1/3</div><div class="stat-l">Elevators offline</div></div>
+      <div class="stat"><div class="stat-n">33%</div><div class="stat-l">Capacity lost</div></div>
+      <div class="stat"><div class="stat-n">0</div><div class="stat-l">Attack logs written</div></div>
+      <div class="stat"><div class="stat-n">1</div><div class="stat-l">Packet to do this</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Defense ───────────────────────────────────────────────────────── -->
+<div id="defense" class="panel">
+  <h2>Defense — how to stop this</h2>
+  <p class="lead">None of these mitigations require replacing the PLCs. They are configuration and network changes.</p>
+
+  <div class="def-grid">
+    <div class="def-card">
+      <div class="def-n">01</div>
+      <div class="def-title">Network segmentation</div>
+      <div class="def-body">Place elevator PLCs on a dedicated VLAN. Firewall rule: SCADA server → PLC IPs on port 502 only. Attacker on the corporate network cannot reach the OT segment at all.</div>
+    </div>
+    <div class="def-card">
+      <div class="def-n">02</div>
+      <div class="def-title">Modbus firewall — Function Code allowlist</div>
+      <div class="def-body">Deploy an OT-aware firewall (Claroty, Dragos, Nozomi) that inspects Modbus packets. Allow FC=3 (read) from SCADA IP only. Block FC=6 (write register) from any unauthorized source.</div>
+    </div>
+    <div class="def-card dark">
+      <div class="def-n">03</div>
+      <div class="def-title">Write-protect HR4 at PLC config level</div>
+      <div class="def-body">Siemens S7-1500 and Allen-Bradley ControlLogix support register-level access control in engineering config. HR4 (fault_code) should be read-only from the network — writable only via local engineering tool with password.</div>
+    </div>
+    <div class="def-card dark">
+      <div class="def-n">04</div>
+      <div class="def-title">Queue rate limiting + anomaly detection</div>
+      <div class="def-body">PLC-side logic: if cmd_queue fills >6 slots within 2 seconds, raise SCADA alarm. Real-world average: 1–3 floor commands per minute. 24 commands per second is an obvious anomaly — detectable without ML.</div>
+    </div>
+  </div>
+
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;margin-top:20px;">
+    <div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:10px;">The root cause (Modbus RFC 6833)</div>
+    <div style="font-size:13px;color:var(--muted);line-height:1.7;">
+      Modbus/TCP was designed in 1979 for serial communication in isolated factory floors — adversarial networks were not a design consideration.
+      RFC 6833 explicitly acknowledges this. The protocol has no session concept, no authentication mechanism, and no packet signing.
+      Any device on the same network that can reach TCP port 502 can read <em>and write</em> any register on any PLC with no credentials.
+      This is not a bug — it is the intended behaviour of the protocol. Security must be enforced by the network, not the protocol.
+    </div>
+  </div>
+</div>
+
+<footer>
+  <div><strong>Sec-Llama</strong> — OT Cyber Demo &nbsp;·&nbsp; KipuCon Conference</div>
+  <div>python elevator_ot_demo.py --attack --attack-delay 15</div>
+</footer>
+
+<script>
+function show(id, btn) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+}
+</script>
+</body>
+</html>
