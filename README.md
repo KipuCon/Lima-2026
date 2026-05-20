@@ -1,11 +1,6 @@
-<table width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td align="center" bgcolor="#0d0d0d" style="padding:32px 0 24px">
-<img src="https://kipucon.org/KipuCon.svg" alt="KipuCon" width="220"/>
-<br/><br/>
-<strong style="color:#ffffff;font-size:18px">The Latin American Cybersecurity Summit</strong><br/>
-<em style="color:#aaaaaa">Decrypting the Future. Honoring the Past.</em>
-</td></tr></table>
-
 <div align="center">
+
+<img src="./.github/assets/kipucon-banner.svg" alt="KipuCon — The Latin American Cybersecurity Summit"/>
 
 ![Lima](https://img.shields.io/badge/📍_Lima,_Peru-2026-ff3131?style=flat-square&labelColor=1a1a1a)
 ![Edition](https://img.shields.io/badge/KipuCon-Lima_2026-ffffff?style=flat-square&labelColor=1a1a1a)
